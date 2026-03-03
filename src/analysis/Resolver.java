@@ -29,6 +29,7 @@ public class Resolver {
 
     public void resolve(List<Stmt> statements) {
         beginNewScope();
+        scopes.peek().put("isKeyDown", true);
         statements.forEach(this::resolve);
         endNewScope();
     }

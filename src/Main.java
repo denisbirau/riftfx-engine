@@ -5,15 +5,21 @@ import error.IErrorReporter;
 import parsing.Parser;
 import parsing.Scanner;
 import parsing.Token;
+import runtime.GameState;
 import runtime.Interpreter;
 
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 
-public class Main {
+public class Main extends JPanel {
+    private static Interpreter globalInterpreter;
     private static final IErrorReporter errorReporter = new ErrorReporter();
 
     public static void main(String[] args) {
@@ -38,17 +44,65 @@ public class Main {
             List<Stmt> statements = parser.parse();
             if (errorReporter.hadError()) System.exit(65);
 
-            Interpreter interpreter = new Interpreter(statements, errorReporter);
-            Resolver resolver = new Resolver(interpreter, errorReporter);
+            globalInterpreter = new Interpreter(statements, errorReporter);
+            Resolver resolver = new Resolver(globalInterpreter, errorReporter);
 
             resolver.resolve(statements);
             if (errorReporter.hadError()) System.exit(65);
 
-            interpreter.interpret();
+            globalInterpreter.interpret();
             if (errorReporter.hadError()) System.exit(70);
+
+            SwingUtilities.invokeLater(Main::startGameWindow);
         } catch (IOException e) {
             System.err.println("No such file or directory: " + e.getMessage());
         }
+    }
+
+    public static void startGameWindow() {
+        JFrame frame = new JFrame("Bachelor Thesis");
+        Main gamePanel = new Main();
+        frame.add(gamePanel);
+        frame.setSize(800, 600);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        frame.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                GameState.keysPressed.add(KeyEvent.getKeyText(e.getKeyCode()).toUpperCase());
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                GameState.keysPressed.remove(KeyEvent.getKeyText(e.getKeyCode()).toUpperCase());
+            }
+        });
+
+        frame.setVisible(true);
+        Timer timer = new Timer(16, _ -> {
+            globalInterpreter.callScriptFunction("update");
+            Object playerX = globalInterpreter.getGlobalVariable("playerX");
+            Object playerY = globalInterpreter.getGlobalVariable("playerY");
+            if (playerX instanceof Double) {
+                GameState.playerX = (Double) playerX;
+            }
+            if (playerY instanceof Double) {
+                GameState.playerY = (Double) playerY;
+            }
+            gamePanel.repaint();
+        });
+        timer.start();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, getWidth(), getHeight());
+
+        g.setColor(Color.RED);
+        g.fillRect((int) GameState.playerX, (int) GameState.playerY, 50, 50);
     }
 }
 

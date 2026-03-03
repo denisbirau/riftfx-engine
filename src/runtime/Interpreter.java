@@ -21,6 +21,20 @@ public class Interpreter {
         this.statements = statements;
         this.errorReporter = errorReporter;
         currentEnvironment = new Environment();
+
+        // Native functions
+        this.currentEnvironment.define("isKeyDown", new NativeFunctionIsKeyDown());
+    }
+
+    public void callScriptFunction(String identifier) {
+        Object function = currentEnvironment.getValue(identifier);
+        if (function instanceof Callable callable) {
+            callable.call(List.of(), this);
+        }
+    }
+
+    public Object getGlobalVariable(String identifier) {
+        return currentEnvironment.getValue(identifier);
     }
 
     public void addIdentifierDistance(Expr expr, int depth) {

@@ -1,0 +1,10 @@
+let playerX = 100;
+let playerY = 100;
+let speed = 5;
+
+def update() {
+    if (isKeyDown("D")) { playerX = playerX + speed; }
+    if (isKeyDown("A")) { playerX = playerX - speed; }
+    if (isKeyDown("W")) { playerY = playerY - speed; }
+    if (isKeyDown("S")) { playerY = playerY + speed; }
+}
