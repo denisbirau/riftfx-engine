@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class Main extends JPanel {
     private static Interpreter globalInterpreter;
@@ -80,15 +81,9 @@ public class Main extends JPanel {
 
         frame.setVisible(true);
         Timer timer = new Timer(16, _ -> {
+            GameState.renderQueue.clear();
             globalInterpreter.callScriptFunction("update");
-            Object playerX = globalInterpreter.getGlobalVariable("playerX");
-            Object playerY = globalInterpreter.getGlobalVariable("playerY");
-            if (playerX instanceof Double) {
-                GameState.playerX = (Double) playerX;
-            }
-            if (playerY instanceof Double) {
-                GameState.playerY = (Double) playerY;
-            }
+            globalInterpreter.callScriptFunction("draw");
             gamePanel.repaint();
         });
         timer.start();
@@ -102,7 +97,9 @@ public class Main extends JPanel {
         g.fillRect(0, 0, getWidth(), getHeight());
 
         g.setColor(Color.RED);
-        g.fillRect((int) GameState.playerX, (int) GameState.playerY, 50, 50);
+        for (Consumer<Graphics> command : GameState.renderQueue) {
+            command.accept(g);
+        }
     }
 }
 

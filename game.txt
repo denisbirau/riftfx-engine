@@ -2,9 +2,17 @@ let playerX = 100;
 let playerY = 100;
 let speed = 5;
 
+// Update handles logic and input
 def update() {
-    if (isKeyDown("D")) { playerX = playerX + speed; }
-    if (isKeyDown("A")) { playerX = playerX - speed; }
     if (isKeyDown("W")) { playerY = playerY - speed; }
+    if (isKeyDown("A")) { playerX = playerX - speed; }
     if (isKeyDown("S")) { playerY = playerY + speed; }
+    if (isKeyDown("D")) { playerX = playerX + speed; }
+}
+
+// Draw handles visuals
+def draw() {
+    drawRect(playerX, playerY, 50, 50, "red");
+    drawRect(300, 200, 50, 50, "blue");
+    drawRect(400, 100, 20, 200, "green");
 }
