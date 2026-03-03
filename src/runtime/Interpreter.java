@@ -35,6 +35,13 @@ public class Interpreter {
         }
     }
 
+    public void callScriptFunction(String identifier, List<Object> arguments) {
+        Object function = currentEnvironment.getValue(identifier);
+        if (function instanceof Callable callable) {
+            callable.call(arguments, this);
+        }
+    }
+
     public Object getGlobalVariable(String identifier) {
         return currentEnvironment.getValue(identifier);
     }

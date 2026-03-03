@@ -6,21 +6,21 @@ class Entity {
         this.next = null;
     }
 
-    update() {}
+    update(dt) {}
     draw() {}
 }
 
 class Player extends Entity {
     constructor(x, y) {
         super.setup(x, y, "Player");
-        this.speed = 5;
+        this.speed = 300;
     }
 
-    update() {
-        if (isKeyDown("W")) { this.y = this.y - this.speed; }
-        if (isKeyDown("A")) { this.x = this.x - this.speed; }
-        if (isKeyDown("S")) { this.y = this.y + this.speed; }
-        if (isKeyDown("D")) { this.x = this.x + this.speed; }
+    update(dt) {
+        if (isKeyDown("W")) { this.y = this.y - (this.speed * dt); }
+        if (isKeyDown("A")) { this.x = this.x - (this.speed * dt); }
+        if (isKeyDown("S")) { this.y = this.y + (this.speed * dt); }
+        if (isKeyDown("D")) { this.x = this.x + (this.speed * dt); }
     }
 
     draw() {
@@ -35,8 +35,8 @@ class Enemy extends Entity {
         this.direction = 1;
     }
 
-    update() {
-        this.x = this.x + (this.speed * this.direction);
+    update(dt) {
+        this.x = this.x + (this.speed * this.direction * dt);
         if (this.x > 700) { this.direction = -1; }
         if (this.x < 0) { this.direction = 1; }
     }
@@ -51,7 +51,7 @@ class Coin extends Entity {
         super.setup(x, y, "Coin");
     }
 
-    update() {}
+    update(dt) {}
 
     draw() {
         drawRect(this.x, this.y, 30, 30, "yellow");
@@ -75,19 +75,18 @@ def spawn(entity) {
 let player = Player(100, 100);
 spawn(player);
 
-spawn(Enemy(200, 300, 2));
-spawn(Enemy(400, 100, 5));
-spawn(Enemy(100, 450, 3));
+spawn(Enemy(200, 300, 150));
+spawn(Enemy(400, 100, 250));
 
 spawn(Coin(300, 150));
 spawn(Coin(500, 400));
 spawn(Coin(150, 450));
 
 let score = 0;
-def update() {
+def update(dt) {
     let current = head;
     while (current != null) {
-        current.update();
+        current.update(dt);
         current = current.next;
     }
 

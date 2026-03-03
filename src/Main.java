@@ -80,9 +80,15 @@ public class Main extends JPanel {
         });
 
         frame.setVisible(true);
+
+        final long[] lastTime = { System.currentTimeMillis() };
         Timer timer = new Timer(16, _ -> {
+            long now = System.currentTimeMillis();
+            double dt = (now - lastTime[0]) / 1000.0;
+            lastTime[0] = now;
+
             GameState.renderQueue.clear();
-            globalInterpreter.callScriptFunction("update");
+            globalInterpreter.callScriptFunction("update", List.of(dt));
             globalInterpreter.callScriptFunction("draw");
             gamePanel.repaint();
         });
