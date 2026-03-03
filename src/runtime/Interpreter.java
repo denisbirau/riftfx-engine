@@ -25,6 +25,7 @@ public class Interpreter {
         // Native functions
         this.currentEnvironment.define("isKeyDown", new NativeFunctionIsKeyDown());
         this.currentEnvironment.define("drawRect", new NativeFunctionDrawRect());
+        this.currentEnvironment.define("drawText", new NativeFunctionDrawText());
     }
 
     public void callScriptFunction(String identifier) {

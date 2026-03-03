@@ -1,0 +1,131 @@
+class Entity {
+    setup(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.next = null;
+    }
+
+    update() {}
+    draw() {}
+}
+
+class Player extends Entity {
+    constructor(x, y) {
+        super.setup(x, y, "Player");
+        this.speed = 5;
+    }
+
+    update() {
+        if (isKeyDown("W")) { this.y = this.y - this.speed; }
+        if (isKeyDown("A")) { this.x = this.x - this.speed; }
+        if (isKeyDown("S")) { this.y = this.y + this.speed; }
+        if (isKeyDown("D")) { this.x = this.x + this.speed; }
+    }
+
+    draw() {
+        drawRect(this.x, this.y, 50, 50, "red");
+    }
+}
+
+class Enemy extends Entity {
+    constructor(x, y, speed) {
+        super.setup(x, y, "Enemy");
+        this.speed = speed;
+        this.direction = 1;
+    }
+
+    update() {
+        this.x = this.x + (this.speed * this.direction);
+        if (this.x > 700) { this.direction = -1; }
+        if (this.x < 0) { this.direction = 1; }
+    }
+
+    draw() {
+        drawRect(this.x, this.y, 50, 50, "blue");
+    }
+}
+
+class Coin extends Entity {
+    constructor(x, y) {
+        super.setup(x, y, "Coin");
+    }
+
+    update() {}
+
+    draw() {
+        drawRect(this.x, this.y, 30, 30, "yellow");
+    }
+}
+
+def checkCollision(a, b) {
+    let size = 50;
+    return a.x < b.x + size and
+           a.x + size > b.x and
+           a.y < b.y + size and
+           a.y + size > b.y;
+}
+
+let head = null;
+def spawn(entity) {
+    entity.next = head;
+    head = entity;
+}
+
+let player = Player(100, 100);
+spawn(player);
+
+spawn(Enemy(200, 300, 2));
+spawn(Enemy(400, 100, 5));
+spawn(Enemy(100, 450, 3));
+
+spawn(Coin(300, 150));
+spawn(Coin(500, 400));
+spawn(Coin(150, 450));
+
+let score = 0;
+def update() {
+    let current = head;
+    while (current != null) {
+        current.update();
+        current = current.next;
+    }
+
+    let previous = null;
+    current = head;
+    while (current != null) {
+        let nodeWasDeleted = false;
+        if (current.type == "Enemy") {
+            if (checkCollision(player, current)) {
+                print "GAME OVER!";
+                player.x = 100;
+                player.y = 100;
+            }
+        }
+        if (current.type == "Coin") {
+            if (checkCollision(player, current)) {
+                score = score + 1;
+                print "SCORE: " + score;
+                if (previous == null) {
+                    head = current.next;
+                } else {
+                    previous.next = current.next;
+                }
+                nodeWasDeleted = true;
+            }
+        }
+        if (nodeWasDeleted == false) {
+            previous = current;
+        }
+        current = current.next;
+    }
+}
+
+def draw() {
+    let current = head;
+    while (current != null) {
+        current.draw();
+        current = current.next;
+    }
+    drawText("Score: " + score, 10, 30, "white");
+}
