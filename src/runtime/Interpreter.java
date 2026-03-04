@@ -30,6 +30,7 @@ public class Interpreter {
         this.currentEnvironment.define("drawRect", new NativeFunctionDrawRect());
         this.currentEnvironment.define("drawText", new NativeFunctionDrawText());
         this.currentEnvironment.define("drawSprite", new NativeFunctionDrawSprite());
+        this.currentEnvironment.define("playSound", new NativeFunctionPlaySound());
     }
 
     public void callScriptFunction(String identifier) {

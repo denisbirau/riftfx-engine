@@ -76,6 +76,7 @@ def update(dt) {
 
         if (current.type == "Coin" and checkCollision(player, current)) {
             score = score + 1;
+            playSound("coin.wav");
             removeAt(entities, i);
             wasDeleted = true;
         }

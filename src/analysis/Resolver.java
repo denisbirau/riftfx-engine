@@ -36,6 +36,7 @@ public class Resolver {
         scopes.peek().put("drawRect", true);
         scopes.peek().put("drawText", true);
         scopes.peek().put("drawSprite", true);
+        scopes.peek().put("playSound", true);
         statements.forEach(this::resolve);
         endNewScope();
     }
