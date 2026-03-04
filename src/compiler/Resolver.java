@@ -3,7 +3,6 @@ package compiler;
 import ast.Expr;
 import ast.Stmt;
 import error.IErrorReporter;
-import runtime.Interpreter;
 
 import java.util.HashMap;
 import java.util.List;
@@ -11,7 +10,6 @@ import java.util.Map;
 import java.util.Stack;
 
 public class Resolver {
-    private final Interpreter interpreter;
     private final IErrorReporter errorReporter;
     private final Stack<Map<String, Boolean>> scopes = new Stack<>();
 
@@ -21,8 +19,7 @@ public class Resolver {
     private boolean insideClass = false;
     private boolean hasSuperclass = false;
 
-    public Resolver(Interpreter interpreter, IErrorReporter errorReporter) {
-        this.interpreter = interpreter;
+    public Resolver(IErrorReporter errorReporter) {
         this.errorReporter = errorReporter;
     }
 
@@ -78,7 +75,14 @@ public class Resolver {
     private void resolveLocal(Expr expr, Token identifier) {
         for (int i = scopes.size() - 1; i >= 0; i--) {
             if (scopes.get(i).containsKey(identifier.lexeme)) {
-                interpreter.addIdentifierDistance(expr, scopes.size() - i - 1);
+                int distance = scopes.size() - i - 1;
+                switch (expr) {
+                    case Expr.Lookup e     -> e.distance = distance;
+                    case Expr.Assignment e -> e.distance = distance;
+                    case Expr.This e       -> e.distance = distance;
+                    case Expr.Super e      -> e.distance = distance;
+                    default -> {}
+                }
                 return;
             }
         }

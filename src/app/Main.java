@@ -46,12 +46,11 @@ public class Main {
             List<Stmt> statements = parser.parse();
             if (errorReporter.hadError()) System.exit(65);
 
-            Interpreter interpreter = new Interpreter(statements, errorReporter);
-            Resolver resolver = new Resolver(interpreter, errorReporter);
-
+            Resolver resolver = new Resolver(errorReporter);
             resolver.resolve(statements);
             if (errorReporter.hadError()) System.exit(65);
 
+            Interpreter interpreter = new Interpreter(statements, errorReporter);
             interpreter.interpret();
             if (errorReporter.hadError()) System.exit(70);
 
@@ -65,7 +64,6 @@ public class Main {
 
 
 // Must implement
-// TODO: Change Resolver Logic to Direct Linking (Symbols/Pointers instead of map of distances)
 // TODO: Change Parser Logic to a more flat approach (Looking into Pratt Parsing)
 
 // I probably need this

@@ -14,25 +14,25 @@ import java.util.List;
 import java.util.Map;
 
 public class Interpreter {
-    Environment currentEnvironment;
-    private final Map<Expr, Integer> identifiersDistances = new HashMap<>();
+    public Environment globalEnvironment = new Environment();
+    Environment currentEnvironment = globalEnvironment;
+
     private final List<Stmt> statements;
     private final IErrorReporter errorReporter;
 
     public Interpreter(List<Stmt> statements, IErrorReporter errorReporter) {
         this.statements = statements;
         this.errorReporter = errorReporter;
-        currentEnvironment = new Environment();
 
         // Native functions
-        this.currentEnvironment.define("len", new NativeArrayTools.Len());
-        this.currentEnvironment.define("push", new NativeArrayTools.Push());
-        this.currentEnvironment.define("removeAt", new NativeArrayTools.RemoveAt());
-        this.currentEnvironment.define("isKeyDown", new NativeFunctionIsKeyDown());
-        this.currentEnvironment.define("drawRect", new NativeFunctionDrawRect());
-        this.currentEnvironment.define("drawText", new NativeFunctionDrawText());
-        this.currentEnvironment.define("drawSprite", new NativeFunctionDrawSprite());
-        this.currentEnvironment.define("playSound", new NativeFunctionPlaySound());
+        globalEnvironment.define("len", new NativeArrayTools.Len());
+        globalEnvironment.define("push", new NativeArrayTools.Push());
+        globalEnvironment.define("removeAt", new NativeArrayTools.RemoveAt());
+        globalEnvironment.define("isKeyDown", new NativeFunctionIsKeyDown());
+        globalEnvironment.define("drawRect", new NativeFunctionDrawRect());
+        globalEnvironment.define("drawText", new NativeFunctionDrawText());
+        globalEnvironment.define("drawSprite", new NativeFunctionDrawSprite());
+        globalEnvironment.define("playSound", new NativeFunctionPlaySound());
     }
 
     public void callScriptFunction(String identifier) {
@@ -47,10 +47,6 @@ public class Interpreter {
         if (function instanceof Callable callable) {
             callable.call(arguments, this);
         }
-    }
-
-    public void addIdentifierDistance(Expr expr, int depth) {
-        identifiersDistances.put(expr, depth);
     }
 
     public void interpret() {
@@ -86,12 +82,26 @@ public class Interpreter {
             case Expr.Binary e          -> evaluateBinary(e);
             case Expr.Ternary e         -> isTrue(evaluate(e.condition)) ? evaluate(e.thenExpression) : evaluate(e.elseExpression);
             case Expr.Group e           -> evaluate(e.expression);
-            case Expr.Lookup e          -> currentEnvironment.getAt(e.identifier.lexeme, identifiersDistances.get(e));
-            case Expr.Assignment e      -> currentEnvironment.updateAt(e.identifier, evaluate(e.expression), identifiersDistances.get(e));
+            case Expr.Lookup e          -> {
+                if (e.distance != null) {
+                    yield currentEnvironment.getAt(e.identifier.lexeme, e.distance);
+                } else {
+                    yield globalEnvironment.getValue(e.identifier.lexeme);
+                }
+            }
+            case Expr.Assignment e      -> {
+                Object value = evaluate(e.expression);
+                if (e.distance != null) {
+                    currentEnvironment.updateAt(e.identifier, value, e.distance);
+                } else {
+                    globalEnvironment.updateValue(e.identifier, value);
+                }
+                yield value;
+            }
             case Expr.Call e            -> evaluateCall(e);
             case Expr.Get e             -> evaluateGet(e);
             case Expr.Set e             -> evaluateSet(e);
-            case Expr.This e            -> currentEnvironment.getAt("this", identifiersDistances.get(e));
+            case Expr.This e            -> currentEnvironment.getAt("this", e.distance);
             case Expr.Super e           -> evaluateSuper(e);
             case Expr.ArrayDefinition e -> evaluateArrayDefinition(e);
             case Expr.SubscriptGet e    -> evaluateSubscriptGet(e);
@@ -251,9 +261,8 @@ public class Interpreter {
     }
 
     private Object evaluateSuper(Expr.Super e) {
-        int distance = identifiersDistances.get(e);
-        var superclass = (Class) currentEnvironment.getAt("super", distance);
-        var instance = (Instance) currentEnvironment.getAt("this", distance - 1);
+        var superclass = (Class) currentEnvironment.getAt("super", e.distance);
+        var instance = (Instance) currentEnvironment.getAt("this", e.distance - 1);
         var method = superclass.getMethod(e.method.lexeme);
         if (method == null) throw new RuntimeError("Undefined method '" + e.method.lexeme + "'.", e.method.line);
         return method.bindInstance(instance);
