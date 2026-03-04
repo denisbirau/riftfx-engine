@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 public class Interpreter {
-    public Environment globalEnvironment = new Environment();
+    Environment globalEnvironment = new Environment();
     Environment currentEnvironment = globalEnvironment;
 
     private final List<Stmt> statements;

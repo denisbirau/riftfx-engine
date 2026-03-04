@@ -24,9 +24,7 @@ public class NativeFunctionDrawSprite implements Callable {
 
         Image image = AssetManager.getImage(path);
 
-        GameState.renderQueue.add((Graphics g) -> {
-            g.drawImage(image, x, y, w, h, null);
-        });
+        GameState.renderQueue.add((Graphics g) -> g.drawImage(image, x, y, w, h, null));
 
         return null;
     }

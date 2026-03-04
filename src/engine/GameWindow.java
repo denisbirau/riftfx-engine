@@ -1,6 +1,5 @@
 package engine;
 
-import app.Main;
 import runtime.Interpreter;
 
 import javax.swing.*;

@@ -25,17 +25,16 @@ class Environment {
         return ancestor(distance).getValue(identifier);
     }
 
-    Object updateAt(Token identifier, Object newValue, Integer distance) {
-        return ancestor(distance).updateValue(identifier, newValue);
+    void updateAt(Token identifier, Object newValue, Integer distance) {
+        ancestor(distance).updateValue(identifier, newValue);
     }
 
     Object getValue(String identifier) {
         return identifiers.get(identifier);
     }
 
-    Object updateValue(Token identifier, Object newValue) {
+    void updateValue(Token identifier, Object newValue) {
         identifiers.put(identifier.lexeme, newValue);
-        return newValue;
     }
 
     private Environment ancestor(int distance) {

@@ -29,5 +29,5 @@ public enum TokenType {
     CLASS, THIS, EXTENDS, SUPER,
 
     // End of file
-    EOF;
+    EOF
 }
