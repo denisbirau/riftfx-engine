@@ -35,6 +35,7 @@ public class Resolver {
         scopes.peek().put("isKeyDown", true);
         scopes.peek().put("drawRect", true);
         scopes.peek().put("drawText", true);
+        scopes.peek().put("drawSprite", true);
         statements.forEach(this::resolve);
         endNewScope();
     }
