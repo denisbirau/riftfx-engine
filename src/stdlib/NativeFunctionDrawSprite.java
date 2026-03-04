@@ -1,4 +1,9 @@
-package runtime;
+package stdlib;
+
+import engine.AssetManager;
+import engine.GameState;
+import runtime.Callable;
+import runtime.Interpreter;
 
 import java.awt.*;
 import java.util.List;

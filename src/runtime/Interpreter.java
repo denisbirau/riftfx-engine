@@ -3,8 +3,10 @@ package runtime;
 import ast.Expr;
 import ast.Stmt;
 import error.IErrorReporter;
-import parsing.Token;
-import parsing.TokenType;
+import compiler.Token;
+import compiler.TokenType;
+import error.RuntimeError;
+import stdlib.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;

@@ -1,6 +1,6 @@
 package runtime;
 
-import parsing.Token;
+import compiler.Token;
 
 import java.util.HashMap;
 import java.util.Map;

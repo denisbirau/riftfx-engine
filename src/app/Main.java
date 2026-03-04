@@ -1,26 +1,22 @@
-import analysis.Resolver;
+package app;
+
+import compiler.Resolver;
 import ast.Stmt;
+import engine.GameWindow;
 import error.ErrorReporter;
 import error.IErrorReporter;
-import parsing.Parser;
-import parsing.Scanner;
-import parsing.Token;
-import runtime.GameState;
+import compiler.Parser;
+import compiler.Scanner;
+import compiler.Token;
 import runtime.Interpreter;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.function.Consumer;
 
-public class Main extends JPanel {
-    private static Interpreter globalInterpreter;
+public class Main {
     private static final IErrorReporter errorReporter = new ErrorReporter();
 
     public static void main(String[] args) {
@@ -29,10 +25,15 @@ public class Main extends JPanel {
             System.exit(64);
         }
 
-        run(args[0]);
+        Interpreter interpreter = compileAndRun(args[0]);
+
+        if (interpreter != null) {
+            GameWindow gameWindow = new GameWindow(interpreter);
+            gameWindow.start();
+        }
     }
 
-    public static void run(String path) {
+    public static Interpreter compileAndRun(String path) {
         try {
             byte[] bytes = Files.readAllBytes(Paths.get(path));
             String sourceCode = new String(bytes, StandardCharsets.UTF_8);
@@ -45,67 +46,20 @@ public class Main extends JPanel {
             List<Stmt> statements = parser.parse();
             if (errorReporter.hadError()) System.exit(65);
 
-            globalInterpreter = new Interpreter(statements, errorReporter);
-            Resolver resolver = new Resolver(globalInterpreter, errorReporter);
+            Interpreter interpreter = new Interpreter(statements, errorReporter);
+            Resolver resolver = new Resolver(interpreter, errorReporter);
 
             resolver.resolve(statements);
             if (errorReporter.hadError()) System.exit(65);
 
-            globalInterpreter.interpret();
+            interpreter.interpret();
             if (errorReporter.hadError()) System.exit(70);
 
-            SwingUtilities.invokeLater(Main::startGameWindow);
+            return interpreter;
         } catch (IOException e) {
             System.err.println("No such file or directory: " + e.getMessage());
         }
-    }
-
-    public static void startGameWindow() {
-        JFrame frame = new JFrame("Bachelor Thesis");
-        Main gamePanel = new Main();
-        frame.add(gamePanel);
-        frame.setSize(800, 600);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        frame.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                GameState.keysPressed.add(KeyEvent.getKeyText(e.getKeyCode()).toUpperCase());
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-                GameState.keysPressed.remove(KeyEvent.getKeyText(e.getKeyCode()).toUpperCase());
-            }
-        });
-
-        frame.setVisible(true);
-
-        final long[] lastTime = { System.currentTimeMillis() };
-        Timer timer = new Timer(16, _ -> {
-            long now = System.currentTimeMillis();
-            double dt = (now - lastTime[0]) / 1000.0;
-            lastTime[0] = now;
-
-            GameState.renderQueue.clear();
-            globalInterpreter.callScriptFunction("update", List.of(dt));
-            globalInterpreter.callScriptFunction("draw");
-            gamePanel.repaint();
-        });
-        timer.start();
-    }
-
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-
-        g.setColor(Color.BLACK);
-        g.fillRect(0, 0, getWidth(), getHeight());
-
-        g.setColor(Color.RED);
-        for (Consumer<Graphics> command : GameState.renderQueue) {
-            command.accept(g);
-        }
+        return null;
     }
 }
 

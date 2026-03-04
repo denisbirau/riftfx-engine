@@ -1,9 +1,8 @@
-package analysis;
+package compiler;
 
 import ast.Expr;
 import ast.Stmt;
 import error.IErrorReporter;
-import parsing.Token;
 import runtime.Interpreter;
 
 import java.util.HashMap;

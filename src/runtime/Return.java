@@ -1,6 +1,6 @@
 package runtime;
 
-import parsing.Token;
+import compiler.Token;
 
 public class Return extends RuntimeException {
     final Token keyword;

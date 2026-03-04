@@ -1,4 +1,4 @@
-package parsing;
+package compiler;
 
 import error.IErrorReporter;
 

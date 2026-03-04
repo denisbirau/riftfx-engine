@@ -1,6 +1,7 @@
-package runtime;
+package stdlib;
 
-import error.ErrorReporter;
+import runtime.Callable;
+import runtime.Interpreter;
 
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;

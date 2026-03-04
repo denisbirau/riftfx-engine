@@ -1,6 +1,6 @@
 package ast;
 
-import parsing.Token;
+import compiler.Token;
 
 import java.util.List;
 

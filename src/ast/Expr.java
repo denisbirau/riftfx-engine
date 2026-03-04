@@ -1,6 +1,7 @@
 package ast;
 
-import parsing.Token;
+import compiler.Token;
+import runtime.Interpreter;
 
 import java.util.List;
 
@@ -99,6 +100,7 @@ public sealed abstract class Expr permits
 
     public static final class Lookup extends Expr {
         public final Token identifier;
+        public Integer distance = null;
 
         public Lookup(Token identifier) {
             this.identifier = identifier;
@@ -113,6 +115,7 @@ public sealed abstract class Expr permits
     public static final class Assignment extends Expr {
         public final Token identifier;
         public final Expr expression;
+        public Integer distance = null;
 
         public Assignment(Token identifier, Expr expression) {
             this.identifier = identifier;
@@ -182,6 +185,7 @@ public sealed abstract class Expr permits
 
     public static final class This extends Expr {
         public final Token keyword;
+        public Integer distance = null;
 
         public This(Token keyword) {
             this.keyword = keyword;
@@ -196,6 +200,7 @@ public sealed abstract class Expr permits
     public static final class Super extends Expr {
         public final Token keyword;
         public final Token method;
+        public Integer distance = null;
 
         public Super(Token keyword, Token method) {
             this.keyword = keyword;

@@ -1,4 +1,4 @@
-package parsing;
+package compiler;
 
 public class Token {
     public TokenType type;

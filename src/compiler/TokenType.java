@@ -1,4 +1,4 @@
-package parsing;
+package compiler;
 
 public enum TokenType {
     // Single character tokens.
