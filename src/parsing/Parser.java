@@ -209,6 +209,8 @@ public class Parser {
                 return new Expr.Assignment(lookup.identifier, rightExpression);
             } else if (leftExpression instanceof Expr.Get getExpression) {
                 return new Expr.Set(getExpression.calleeExpression, getExpression.property, rightExpression);
+            } else if (leftExpression instanceof Expr.SubscriptGet subscriptGet) {
+                return new Expr.SubscriptSet(subscriptGet.array, subscriptGet.leftBracket, subscriptGet.index, rightExpression);
             }
             throw error("Invalid assignment target.", equalsToken);
         }
@@ -286,6 +288,11 @@ public class Parser {
             } else if (advanceIfNext(TokenType.DOT)) {
                 Token property = expect(TokenType.IDENTIFIER, "Expect property name after '.'.");
                 expression = new Expr.Get(expression, property);
+            } else if (advanceIfNext(TokenType.LEFT_BRACKET)) {
+                Token leftBracket = getPreviousToken();
+                Expr index = parseExpression();
+                expect(TokenType.RIGHT_BRACKET, "Expect ']' after index.");
+                expression = new Expr.SubscriptGet(expression, leftBracket, index);
             } else {
                 break;
             }
@@ -314,6 +321,16 @@ public class Parser {
             expect(TokenType.DOT, "Expect '.' after 'super'.");
             Token method = expect(TokenType.IDENTIFIER, "Expect superclass method name.");
             return new Expr.Super(keyword, method);
+        }
+        if (advanceIfNext(TokenType.LEFT_BRACKET)) {
+            List<Expr> elements = new ArrayList<>();
+            if (!checkCurrentType(TokenType.RIGHT_BRACKET)) {
+                do {
+                    elements.add(parseExpression());
+                } while (advanceIfNext(TokenType.COMMA));
+            }
+            expect(TokenType.RIGHT_BRACKET, "Expect ']' after array elements.");
+            return new Expr.ArrayDefinition(elements);
         }
         throw error("Expect expression.", getPreviousToken());
     }

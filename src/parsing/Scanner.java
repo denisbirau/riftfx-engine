@@ -26,7 +26,9 @@ public class Scanner {
             Map.entry(':', TokenType.COLON),
             Map.entry('{', TokenType.LEFT_BRACE),
             Map.entry('}', TokenType.RIGHT_BRACE),
-            Map.entry('.', TokenType.DOT)
+            Map.entry('.', TokenType.DOT),
+            Map.entry('[', TokenType.LEFT_BRACKET),
+            Map.entry(']', TokenType.RIGHT_BRACKET)
     );
 
     private static final Map<String, TokenType> KEYWORDS = Map.ofEntries(

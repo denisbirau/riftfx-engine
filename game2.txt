@@ -1,18 +1,33 @@
+// --- BASE ENGINE ---
 class Entity {
-    setup(x, y, type) {
+    setup(x, y, w, h, type) {
         this.x = x;
         this.y = y;
+        this.w = w;
+        this.h = h;
         this.type = type;
-        this.next = null;
     }
 
     update(dt) {}
     draw() {}
 }
 
+def checkCollision(a, b) {
+    return a.x < b.x + b.w and
+           a.x + a.w > b.x and
+           a.y < b.y + b.h and
+           a.y + a.h > b.y;
+}
+
+let entities = [];
+def spawn(entity) {
+    push(entities, entity);
+}
+
+// --- GAME CLASSES ---
 class Player extends Entity {
     constructor(x, y) {
-        super.setup(x, y, "Player");
+        super.setup(x, y, 50, 50, "Player");
         this.speed = 300;
     }
 
@@ -24,107 +39,55 @@ class Player extends Entity {
     }
 
     draw() {
-        drawRect(this.x, this.y, 50, 50, "red");
-    }
-}
-
-class Enemy extends Entity {
-    constructor(x, y, speed) {
-        super.setup(x, y, "Enemy");
-        this.speed = speed;
-        this.direction = 1;
-    }
-
-    update(dt) {
-        this.x = this.x + (this.speed * this.direction * dt);
-        if (this.x > 700) { this.direction = -1; }
-        if (this.x < 0) { this.direction = 1; }
-    }
-
-    draw() {
-        drawRect(this.x, this.y, 50, 50, "blue");
+        drawRect(this.x, this.y, this.w, this.h, "red");
     }
 }
 
 class Coin extends Entity {
     constructor(x, y) {
-        super.setup(x, y, "Coin");
+        super.setup(x, y, 30, 30, "Coin");
     }
 
     update(dt) {}
 
     draw() {
-        drawRect(this.x, this.y, 30, 30, "yellow");
+        drawRect(this.x, this.y, this.w, this.h, "yellow");
     }
 }
 
-def checkCollision(a, b) {
-    let size = 50;
-    return a.x < b.x + size and
-           a.x + size > b.x and
-           a.y < b.y + size and
-           a.y + size > b.y;
-}
-
-let head = null;
-def spawn(entity) {
-    entity.next = head;
-    head = entity;
-}
-
+// --- SETUP ---
+let score = 0;
 let player = Player(100, 100);
+
 spawn(player);
-
-spawn(Enemy(200, 300, 150));
-spawn(Enemy(400, 100, 250));
-
 spawn(Coin(300, 150));
 spawn(Coin(500, 400));
 spawn(Coin(150, 450));
 
-let score = 0;
+// --- MAIN LOOP ---
 def update(dt) {
-    let current = head;
-    while (current != null) {
-        current.update(dt);
-        current = current.next;
-    }
+    for (let i = 0; i < len(entities); i = i + 1)
+        entities[i].update(dt);
 
-    let previous = null;
-    current = head;
-    while (current != null) {
-        let nodeWasDeleted = false;
-        if (current.type == "Enemy") {
-            if (checkCollision(player, current)) {
-                print "GAME OVER!";
-                player.x = 100;
-                player.y = 100;
-            }
+
+    for (let i = 0; i < len(entities); i = i + 1) {
+        let current = entities[i];
+        let wasDeleted = false;
+
+        if (current.type == "Coin" and checkCollision(player, current)) {
+            score = score + 1;
+            removeAt(entities, i);
+            wasDeleted = true;
         }
-        if (current.type == "Coin") {
-            if (checkCollision(player, current)) {
-                score = score + 1;
-                print "SCORE: " + score;
-                if (previous == null) {
-                    head = current.next;
-                } else {
-                    previous.next = current.next;
-                }
-                nodeWasDeleted = true;
-            }
-        }
-        if (nodeWasDeleted == false) {
-            previous = current;
-        }
-        current = current.next;
+
+        if (wasDeleted)
+            i = i - 1;
     }
 }
 
 def draw() {
-    let current = head;
-    while (current != null) {
-        current.draw();
-        current = current.next;
-    }
+    for (let i = 0; i < len(entities); i = i + 1)
+        entities[i].draw();
+
     drawText("Score: " + score, 10, 30, "white");
 }

@@ -16,7 +16,10 @@ public sealed abstract class Expr permits
         Expr.Get,
         Expr.Set,
         Expr.This,
-        Expr.Super
+        Expr.Super,
+        Expr.ArrayDefinition,
+        Expr.SubscriptGet,
+        Expr.SubscriptSet
 {
 
     public static final class Literal extends Expr {
@@ -202,6 +205,55 @@ public sealed abstract class Expr permits
         @Override
         public String toString() {
             return "Super(" + method + ")";
+        }
+    }
+
+    public static final class ArrayDefinition extends Expr {
+        public final List<Expr> elements;
+
+        public ArrayDefinition(List<Expr> elements) {
+            this.elements = elements;
+        }
+
+        @Override
+        public String toString() {
+            return "Array(" + this.elements + ")";
+        }
+    }
+
+    public static final class SubscriptGet extends Expr {
+        public final Expr array;
+        public final Token leftBracket;
+        public final Expr index;
+
+        public SubscriptGet(Expr array, Token leftBracket, Expr index) {
+            this.array = array;
+            this.leftBracket = leftBracket;
+            this.index = index;
+        }
+
+        @Override
+        public String toString() {
+            return "SubscriptGet(" + array + "[" + index + "])";
+        }
+    }
+
+    public static final class SubscriptSet extends Expr {
+        public final Expr array;
+        public final Token leftBracket;
+        public final Expr index;
+        public final Expr value;
+
+        public SubscriptSet(Expr array, Token leftBracket, Expr index, Expr value) {
+            this.array = array;
+            this.leftBracket = leftBracket;
+            this.index = index;
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return "SubscriptSet(" + array + "[" + index + "]" + " = " + value + ")";
         }
     }
 }

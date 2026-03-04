@@ -29,6 +29,9 @@ public class Resolver {
 
     public void resolve(List<Stmt> statements) {
         beginNewScope();
+        scopes.peek().put("len", true);
+        scopes.peek().put("push", true);
+        scopes.peek().put("removeAt", true);
         scopes.peek().put("isKeyDown", true);
         scopes.peek().put("drawRect", true);
         scopes.peek().put("drawText", true);
@@ -53,18 +56,21 @@ public class Resolver {
 
     private void resolve(Expr expr) {
         switch (expr) {
-            case Expr.Literal _    -> {}
-            case Expr.Unary e      -> resolve(e.expression);
-            case Expr.Binary e     -> { resolve(e.leftExpression); resolve(e.rightExpression); }
-            case Expr.Ternary e    -> { resolve(e.condition); resolve(e.thenExpression); resolve(e.elseExpression); }
-            case Expr.Group e      -> resolve(e.expression);
-            case Expr.Lookup e     -> resolveLookup(e);
-            case Expr.Assignment e -> { resolve(e.expression); resolveLocal(e, e.identifier); }
-            case Expr.Call e       -> resolveCallExpr(e);
-            case Expr.Get e        -> resolve(e.calleeExpression);
-            case Expr.Set e        -> { resolve(e.calleeExpression); resolve(e.expression); }
-            case Expr.This e       -> resolveThisExpr(e);
-            case Expr.Super e      -> resolveSuperExpr(e);
+            case Expr.Literal _         -> {}
+            case Expr.Unary e           -> resolve(e.expression);
+            case Expr.Binary e          -> { resolve(e.leftExpression); resolve(e.rightExpression); }
+            case Expr.Ternary e         -> { resolve(e.condition); resolve(e.thenExpression); resolve(e.elseExpression); }
+            case Expr.Group e           -> resolve(e.expression);
+            case Expr.Lookup e          -> resolveLookup(e);
+            case Expr.Assignment e      -> { resolve(e.expression); resolveLocal(e, e.identifier); }
+            case Expr.Call e            -> resolveCallExpr(e);
+            case Expr.Get e             -> resolve(e.calleeExpression);
+            case Expr.Set e             -> { resolve(e.calleeExpression); resolve(e.expression); }
+            case Expr.This e            -> resolveThisExpr(e);
+            case Expr.Super e           -> resolveSuperExpr(e);
+            case Expr.ArrayDefinition e -> e.elements.forEach(this::resolve);
+            case Expr.SubscriptGet e    -> { resolve(e.array); resolve(e.index); }
+            case Expr.SubscriptSet e    -> { resolve(e.array); resolve(e.index); resolve(e.value); }
         }
     }
 

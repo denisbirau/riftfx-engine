@@ -17,6 +17,7 @@ public enum TokenType {
 
     // Literals
     STRING, NUMBER, IDENTIFIER,
+    LEFT_BRACKET, RIGHT_BRACKET,
 
     // Keywords
     TRUE, FALSE, NULL,

@@ -23,6 +23,9 @@ public class Interpreter {
         currentEnvironment = new Environment();
 
         // Native functions
+        this.currentEnvironment.define("len", new NativeArrayTools.Len());
+        this.currentEnvironment.define("push", new NativeArrayTools.Push());
+        this.currentEnvironment.define("removeAt", new NativeArrayTools.RemoveAt());
         this.currentEnvironment.define("isKeyDown", new NativeFunctionIsKeyDown());
         this.currentEnvironment.define("drawRect", new NativeFunctionDrawRect());
         this.currentEnvironment.define("drawText", new NativeFunctionDrawText());
@@ -40,10 +43,6 @@ public class Interpreter {
         if (function instanceof Callable callable) {
             callable.call(arguments, this);
         }
-    }
-
-    public Object getGlobalVariable(String identifier) {
-        return currentEnvironment.getValue(identifier);
     }
 
     public void addIdentifierDistance(Expr expr, int depth) {
@@ -78,18 +77,21 @@ public class Interpreter {
 
     private Object evaluate(Expr expr) {
         return switch (expr) {
-            case Expr.Literal e    -> e.value;
-            case Expr.Unary e      -> evaluateUnary(e);
-            case Expr.Binary e     -> evaluateBinary(e);
-            case Expr.Ternary e    -> isTrue(evaluate(e.condition)) ? evaluate(e.thenExpression) : evaluate(e.elseExpression);
-            case Expr.Group e      -> evaluate(e.expression);
-            case Expr.Lookup e     -> currentEnvironment.getAt(e.identifier.lexeme, identifiersDistances.get(e));
-            case Expr.Assignment e -> currentEnvironment.updateAt(e.identifier, evaluate(e.expression), identifiersDistances.get(e));
-            case Expr.Call e       -> evaluateCall(e);
-            case Expr.Get e        -> evaluateGet(e);
-            case Expr.Set e        -> evaluateSet(e);
-            case Expr.This e       -> currentEnvironment.getAt("this", identifiersDistances.get(e));
-            case Expr.Super e      -> evaluateSuper(e);
+            case Expr.Literal e         -> e.value;
+            case Expr.Unary e           -> evaluateUnary(e);
+            case Expr.Binary e          -> evaluateBinary(e);
+            case Expr.Ternary e         -> isTrue(evaluate(e.condition)) ? evaluate(e.thenExpression) : evaluate(e.elseExpression);
+            case Expr.Group e           -> evaluate(e.expression);
+            case Expr.Lookup e          -> currentEnvironment.getAt(e.identifier.lexeme, identifiersDistances.get(e));
+            case Expr.Assignment e      -> currentEnvironment.updateAt(e.identifier, evaluate(e.expression), identifiersDistances.get(e));
+            case Expr.Call e            -> evaluateCall(e);
+            case Expr.Get e             -> evaluateGet(e);
+            case Expr.Set e             -> evaluateSet(e);
+            case Expr.This e            -> currentEnvironment.getAt("this", identifiersDistances.get(e));
+            case Expr.Super e           -> evaluateSuper(e);
+            case Expr.ArrayDefinition e -> evaluateArrayDefinition(e);
+            case Expr.SubscriptGet e    -> evaluateSubscriptGet(e);
+            case Expr.SubscriptSet e    -> evaluateSubscriptSet(e);
         };
     }
 
@@ -251,6 +253,34 @@ public class Interpreter {
         var method = superclass.getMethod(e.method.lexeme);
         if (method == null) throw new RuntimeError("Undefined method '" + e.method.lexeme + "'.", e.method.line);
         return method.bindInstance(instance);
+    }
+
+    private Object evaluateArrayDefinition(Expr.ArrayDefinition e) {
+        List<Object> elements = new ArrayList<>();
+        for (Expr expr : e.elements) {
+            elements.add(evaluate(expr));
+        }
+        return elements;
+    }
+
+    private Object evaluateSubscriptGet(Expr.SubscriptGet e) {
+        Object array = evaluate(e.array);
+        Object index = evaluate(e.index);
+        if (array instanceof List<?> list && index instanceof Double d) {
+            return list.get(d.intValue());
+        }
+        throw new RuntimeError("Only arrays can be sub scripted.", e.leftBracket.line);
+    }
+
+    private Object evaluateSubscriptSet(Expr.SubscriptSet e) {
+        Object array = evaluate(e.array);
+        Object index = evaluate(e.index);
+        Object value = evaluate(e.value);
+        if (array instanceof List list && index instanceof Double d) {
+            list.set(d.intValue(), value);
+            return value;
+        }
+        throw new RuntimeError("Only arrays can be sub scripted.", e.leftBracket.line);
     }
 
     // Helper methods
