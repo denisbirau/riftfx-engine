@@ -62,10 +62,6 @@ public class Main {
     }
 }
 
-
-// Must implement
-// TODO: Change Parser Logic to a more flat approach (Looking into Pratt Parsing)
-
 // I probably need this
 // TODO: Collections (Lists and Maps)
 // TODO: Lambda Functions

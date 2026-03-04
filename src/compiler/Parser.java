@@ -9,13 +9,39 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Supplier;
 
 public class Parser {
     private final List<Token> tokens;
     private int currentIndex = 0;
     private final List<Stmt> statements = new ArrayList<>();
     private final IErrorReporter errorReporter;
+
+    private enum Precedence {
+        NONE,
+        ASSIGNMENT, // =
+        TERNARY,    // ?:
+        OR,         // or
+        AND,        // and
+        EQUALITY,   // ==, !=
+        COMPARISON, // <, >, <=, >=
+        TERM,       // +, -
+        FACTOR,     // *, /
+        UNARY,      // !, -
+        CALL,       // ., (), []
+        PRIMARY
+    }
+
+    @FunctionalInterface
+    interface PrefixParseFn {
+        Expr parse();
+    }
+
+    @FunctionalInterface
+    interface InfixParseFn {
+        Expr parse(Expr leftExpression);
+    }
+
+    private record ParseRule(PrefixParseFn prefixParseFn, InfixParseFn infixParseFn, Precedence precedence) {}
 
     public Parser(List<Token> tokens, IErrorReporter errorReporter) {
         this.tokens = tokens;
@@ -197,143 +223,167 @@ public class Parser {
     }
 
     private Expr parseExpression() {
-        return parseAssignmentExpression();
+        return parsePrecedence(Precedence.ASSIGNMENT);
     }
 
-    private Expr parseAssignmentExpression() {
-        Expr leftExpression = parseTernaryExpression();
-        if (advanceIfNext(TokenType.EQUAL)) {
-            Token equalsToken = getPreviousToken();
-            Expr rightExpression = parseAssignmentExpression();
+    private Expr parsePrecedence(Precedence precedence) {
+        advanceToNextToken();
 
-            if (leftExpression instanceof Expr.Lookup lookup) {
-                return new Expr.Assignment(lookup.identifier, rightExpression);
-            } else if (leftExpression instanceof Expr.Get getExpression) {
-                return new Expr.Set(getExpression.calleeExpression, getExpression.property, rightExpression);
-            } else if (leftExpression instanceof Expr.SubscriptGet subscriptGet) {
-                return new Expr.SubscriptSet(subscriptGet.array, subscriptGet.leftBracket, subscriptGet.index, rightExpression);
-            }
-            throw error("Invalid assignment target.", equalsToken);
+        PrefixParseFn prefixParseFn = getRule(getPreviousToken().type).prefixParseFn;
+        if (prefixParseFn == null) {
+            throw error("Expect expression.", getPreviousToken());
         }
+
+        Expr leftExpression = prefixParseFn.parse();
+        while (precedence.ordinal() <= getRule(getCurrentToken().type).precedence.ordinal()) {
+            advanceToNextToken();
+            InfixParseFn infixParseFn = getRule(getPreviousToken().type).infixParseFn;
+            leftExpression = infixParseFn.parse(leftExpression);
+        }
+
         return leftExpression;
     }
 
-    private Expr parseTernaryExpression() {
-        Expr condition = parseOrExpression();
-        if (advanceIfNext(TokenType.QUESTION_MARK)) {
-            Expr thenExpression = parseOrExpression();
-            expect(TokenType.COLON, "Expect ':' in ternary operator.");
-            Expr elseExpression = parseOrExpression();
-            return new Expr.Ternary(condition, thenExpression, elseExpression);
+    private ParseRule getRule(TokenType tokenType) {
+        return switch (tokenType) {
+            case TokenType.LEFT_PARENTHESIS      -> new ParseRule(this::parseGroupExpression, this::parseCallExpression, Precedence.CALL);
+            case TokenType.LEFT_BRACKET          -> new ParseRule(this::parseArrayDefinitionExpression, this::parseSubscriptGetExpression, Precedence.CALL);
+            case TokenType.DOT                   -> new ParseRule(null, this::parseDotExpression, Precedence.CALL);
+            case TokenType.MINUS                 -> new ParseRule(this::parseUnaryExpression, this::parseBinaryExpression, Precedence.TERM);
+            case TokenType.PLUS                  -> new ParseRule(null, this::parseBinaryExpression, Precedence.TERM);
+            case TokenType.SLASH,
+                 TokenType.STAR                  -> new ParseRule(null, this::parseBinaryExpression, Precedence.FACTOR);
+            case TokenType.NOT                   -> new ParseRule(this::parseUnaryExpression, null, Precedence.NONE);
+            case TokenType.EQUAL_EQUAL,
+                 TokenType.NOT_EQUAL             -> new ParseRule(null, this::parseBinaryExpression, Precedence.EQUALITY);
+            case TokenType.GREATER,
+                 TokenType.GREATER_EQUAL,
+                 TokenType.LESS,
+                 TokenType.LESS_EQUAL            -> new ParseRule(null, this::parseBinaryExpression, Precedence.COMPARISON);
+            case TokenType.AND                   -> new ParseRule(null, this::parseBinaryExpression, Precedence.AND);
+            case TokenType.OR                    -> new ParseRule(null, this::parseBinaryExpression, Precedence.OR);
+            case TokenType.EQUAL                 -> new ParseRule(null, this::parseAssignmentExpression, Precedence.ASSIGNMENT);
+            case TokenType.QUESTION_MARK         -> new ParseRule(null, this::parseTernaryExpression, Precedence.TERNARY);
+            case TokenType.NUMBER                -> new ParseRule(this::parseNumber, null, Precedence.NONE);
+            case TokenType.STRING                -> new ParseRule(this::parseString, null, Precedence.NONE);
+            case TokenType.TRUE,
+                 TokenType.FALSE,
+                 TokenType.NULL                  -> new ParseRule(this::parseLiteral, null, Precedence.NONE);
+            case TokenType.IDENTIFIER            -> new ParseRule(this::parseIdentifier, null, Precedence.NONE);
+            case TokenType.THIS                  -> new ParseRule(this::parseThisExpression, null, Precedence.NONE);
+            case TokenType.SUPER                 -> new ParseRule(this::parseSuperExpression, null, Precedence.NONE);
+            default                              -> new ParseRule(null, null, Precedence.NONE);
+        };
+    }
+
+    private Expr parseGroupExpression() {
+        Expr expression = parseExpression();
+        expect(TokenType.RIGHT_PARENTHESIS, "Expect ')' after expression.");
+        return new Expr.Group(expression);
+    }
+
+    private Expr parseCallExpression(Expr leftExpression) {
+        Token leftParenthesis = getPreviousToken();
+        List<Expr> arguments = new ArrayList<>();
+        if (!checkCurrentType(TokenType.RIGHT_PARENTHESIS)) {
+            do {
+                arguments.add(parseExpression());
+            } while (advanceIfNext(TokenType.COMMA));
         }
-        return condition;
+        expect(TokenType.RIGHT_PARENTHESIS, "Expect ')' after arguments.");
+        return new Expr.Call(leftExpression, leftParenthesis, arguments);
     }
 
-    private Expr parseOrExpression() {
-        return parseBinaryExpression(this::parseAndExpression, TokenType.OR);
-    }
-
-    private Expr parseAndExpression() {
-        return parseBinaryExpression(this::parseEqualityExpression, TokenType.AND);
-    }
-
-    private Expr parseEqualityExpression() {
-        return parseBinaryExpression(this::parseComparativeExpression, TokenType.EQUAL_EQUAL, TokenType.NOT_EQUAL);
-    }
-
-    private Expr parseComparativeExpression() {
-        return parseBinaryExpression(this::parseAdditiveExpression,
-                TokenType.LESS, TokenType.LESS_EQUAL, TokenType.GREATER, TokenType.GREATER_EQUAL);
-    }
-
-    private Expr parseAdditiveExpression() {
-        return parseBinaryExpression(this::parseMultiplicativeExpression, TokenType.PLUS, TokenType.MINUS);
-    }
-
-    private Expr parseMultiplicativeExpression() {
-        return parseBinaryExpression(this::parseUnaryExpression, TokenType.STAR, TokenType.SLASH);
-    }
-
-    private Expr parseBinaryExpression(Supplier<Expr> nextLevel, TokenType... operators) {
-        Expr leftExpression = nextLevel.get();
-        while (advanceIfNext(operators)) {
-            Token operator = getPreviousToken();
-            Expr rightExpression = nextLevel.get();
-            leftExpression = new Expr.Binary(leftExpression, operator, rightExpression);
+    private Expr parseArrayDefinitionExpression() {
+        List<Expr> elements = new ArrayList<>();
+        if (!checkCurrentType(TokenType.RIGHT_BRACKET)) {
+            do {
+                elements.add(parseExpression());
+            } while (advanceIfNext(TokenType.COMMA));
         }
-        return leftExpression;
+        expect(TokenType.RIGHT_BRACKET, "Expect ']' after array elements.");
+        return new Expr.ArrayDefinition(elements);
+    }
+
+    private Expr parseSubscriptGetExpression(Expr leftExpression) {
+        Token leftBracket = getPreviousToken();
+        Expr index = parseExpression();
+        expect(TokenType.RIGHT_BRACKET, "Expect ']' after index.");
+        return new Expr.SubscriptGet(leftExpression, leftBracket, index);
+    }
+
+    private Expr parseDotExpression(Expr leftExpression) {
+        Token property = expect(TokenType.IDENTIFIER, "Expect property name after '.'.");
+        return new Expr.Get(leftExpression, property);
     }
 
     private Expr parseUnaryExpression() {
-        if (advanceIfNext(TokenType.MINUS, TokenType.NOT)) {
-            Token operator = getPreviousToken();
-            Expr expression = parseUnaryExpression();
-            return new Expr.Unary(operator, expression);
-        }
-        return parseCallExpression();
+        Token operator = getPreviousToken();
+        Expr rightExpression = parsePrecedence(Precedence.UNARY);
+        return new Expr.Unary(operator, rightExpression);
     }
 
-    private Expr parseCallExpression() {
-        Expr expression = parsePrimaryExpression();
-        while (true) {
-            if (advanceIfNext(TokenType.LEFT_PARENTHESIS)) {
-                Token leftParenthesis = getPreviousToken();
-                List<Expr> arguments = new ArrayList<>();
-                if (!checkCurrentType(TokenType.RIGHT_PARENTHESIS)) {
-                    do {
-                        arguments.add(parseExpression());
-                    } while (advanceIfNext(TokenType.COMMA));
-                }
-                expect(TokenType.RIGHT_PARENTHESIS, "Expect ')' after arguments.");
-                expression = new Expr.Call(expression, leftParenthesis, arguments);
-            } else if (advanceIfNext(TokenType.DOT)) {
-                Token property = expect(TokenType.IDENTIFIER, "Expect property name after '.'.");
-                expression = new Expr.Get(expression, property);
-            } else if (advanceIfNext(TokenType.LEFT_BRACKET)) {
-                Token leftBracket = getPreviousToken();
-                Expr index = parseExpression();
-                expect(TokenType.RIGHT_BRACKET, "Expect ']' after index.");
-                expression = new Expr.SubscriptGet(expression, leftBracket, index);
-            } else {
-                break;
-            }
-        }
-        return expression;
+    private Expr parseBinaryExpression(Expr leftExpression) {
+        Token operator = getPreviousToken();
+        ParseRule rule = getRule(operator.type);
+        // We use + 1 because standard binary operators are left-associative
+        Expr rightExpression = parsePrecedence(Precedence.values()[rule.precedence.ordinal() + 1]);
+        return new Expr.Binary(leftExpression, operator, rightExpression);
     }
 
-    private Expr parsePrimaryExpression() {
-        if (advanceIfNext(TokenType.TRUE)) return new Expr.Literal(true);
-        if (advanceIfNext(TokenType.FALSE)) return new Expr.Literal(false);
-        if (advanceIfNext(TokenType.NULL)) return new Expr.Literal(null);
-        if (advanceIfNext(TokenType.NUMBER)) return new Expr.Literal(Double.valueOf(getPreviousToken().lexeme));
-        if (advanceIfNext(TokenType.IDENTIFIER)) return new Expr.Lookup(getPreviousToken());
-        if (advanceIfNext(TokenType.THIS)) return new Expr.This(getPreviousToken());
-        if (advanceIfNext(TokenType.STRING)) {
-            String value = getPreviousToken().lexeme.substring(1, getPreviousToken().lexeme.length() - 1);
-            return new Expr.Literal(value);
+    private Expr parseAssignmentExpression(Expr leftExpression) {
+        Token equalsToken = getPreviousToken();
+        Expr rightExpression = parsePrecedence(Precedence.ASSIGNMENT);
+
+        if (leftExpression instanceof Expr.Lookup lookup) {
+            return new Expr.Assignment(lookup.identifier, rightExpression);
+        } else if (leftExpression instanceof Expr.Get getExpression) {
+            return new Expr.Set(getExpression.calleeExpression, getExpression.property, rightExpression);
+        } else if (leftExpression instanceof Expr.SubscriptGet subscriptGet) {
+            return new Expr.SubscriptSet(subscriptGet.array, subscriptGet.leftBracket, subscriptGet.index, rightExpression);
         }
-        if (advanceIfNext(TokenType.LEFT_PARENTHESIS)) {
-            Expr expression = parseExpression();
-            expect(TokenType.RIGHT_PARENTHESIS, "Expect ')' after expression.");
-            return new Expr.Group(expression);
-        }
-        if (advanceIfNext(TokenType.SUPER)) {
-            Token keyword = getPreviousToken();
-            expect(TokenType.DOT, "Expect '.' after 'super'.");
-            Token method = expect(TokenType.IDENTIFIER, "Expect superclass method name.");
-            return new Expr.Super(keyword, method);
-        }
-        if (advanceIfNext(TokenType.LEFT_BRACKET)) {
-            List<Expr> elements = new ArrayList<>();
-            if (!checkCurrentType(TokenType.RIGHT_BRACKET)) {
-                do {
-                    elements.add(parseExpression());
-                } while (advanceIfNext(TokenType.COMMA));
-            }
-            expect(TokenType.RIGHT_BRACKET, "Expect ']' after array elements.");
-            return new Expr.ArrayDefinition(elements);
-        }
-        throw error("Expect expression.", getPreviousToken());
+        throw error("Invalid assignment target.", equalsToken);
+    }
+
+    private Expr parseTernaryExpression(Expr leftExpression) {
+        Expr thenExpression = parseExpression();
+        expect(TokenType.COLON, "Expect ':' in ternary operator.");
+        // Ternary is right-associative, so we don't do + 1 on precedence
+        Expr elseExpression = parsePrecedence(Precedence.TERNARY);
+        return new Expr.Ternary(leftExpression, thenExpression, elseExpression);
+    }
+
+    private Expr parseNumber() {
+        return new Expr.Literal(Double.valueOf(getPreviousToken().lexeme));
+    }
+
+    private Expr parseString() {
+        String value = getPreviousToken().lexeme.substring(1, getPreviousToken().lexeme.length() - 1);
+        return new Expr.Literal(value);
+    }
+
+    private Expr parseLiteral() {
+        return switch (getPreviousToken().type) {
+            case TokenType.TRUE -> new Expr.Literal(true);
+            case TokenType.FALSE -> new Expr.Literal(false);
+            case TokenType.NULL -> new Expr.Literal(null);
+            default -> null; // Unreachable
+        };
+    }
+
+    private Expr parseIdentifier() {
+        return new Expr.Lookup(getPreviousToken());
+    }
+
+    private Expr parseThisExpression() {
+        return new Expr.This(getPreviousToken());
+    }
+
+    private Expr parseSuperExpression() {
+        Token keyword = getPreviousToken();
+        expect(TokenType.DOT, "Expect '.' after 'super'.");
+        Token method = expect(TokenType.IDENTIFIER, "Expect superclass method name.");
+        return new Expr.Super(keyword, method);
     }
 
     private void skipToNextStatement() {

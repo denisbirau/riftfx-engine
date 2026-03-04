@@ -1,7 +1,6 @@
 package ast;
 
 import compiler.Token;
-import runtime.Interpreter;
 
 import java.util.List;
 
