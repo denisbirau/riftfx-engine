@@ -1,0 +1,41 @@
+class CounterCard {
+    constructor(title, startValue) {
+        this.title = title;
+        this.count = State(startValue);
+    }
+
+    reset() {
+        this.count.value = 0;
+        print "Resetting " + this.title;
+    }
+
+    render() {
+        return VBox() {
+            Text(this.title + " Score: " + this.count.value);
+
+            HBox() {
+                Button("-") {
+                    this.count.value = this.count.value - 1;
+                };
+
+                Button("+") {
+                    this.count.value = this.count.value + 1;
+                };
+
+                Button("Reset") {
+                    this.reset();
+                };
+            };
+        };
+    }
+}
+
+let card1 = CounterCard("Player 1", 0);
+let card2 = CounterCard("Player 2", 10);
+
+Window("Example", 400, 300) {
+    VBox() {
+        card1.render();
+        card2.render();
+    };
+};

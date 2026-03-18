@@ -1,0 +1,20 @@
+let count = State(0);
+
+Window("My Counter App", 400, 300) {
+
+    VBox() {
+        Text("You have clicked the button:");
+
+        Text(count.value + " times");
+
+        Button("Increment") {
+            count.value = count.value + 1;
+            print "Count is now: " + count.value;
+        };
+
+        Button("Reset") {
+            count.value = 0;
+        };
+    };
+
+};

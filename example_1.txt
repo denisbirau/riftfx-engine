@@ -72,8 +72,8 @@ def update(dt) {
 
     for (let i = 0; i < len(entities); i = i + 1) {
         let current = entities[i];
-        let wasDeleted = false;
 
+        let wasDeleted = false;
         if (current.type == "Coin" and checkCollision(player, current)) {
             score = score + 1;
             playSound("coin.wav");
