@@ -14,6 +14,7 @@ public enum TokenType {
     NOT, NOT_EQUAL,
     LESS, LESS_EQUAL,
     GREATER, GREATER_EQUAL,
+    ARROW,
 
     // Literals
     STRING, NUMBER, IDENTIFIER,

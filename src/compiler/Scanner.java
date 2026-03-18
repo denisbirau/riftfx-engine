@@ -16,7 +16,6 @@ public class Scanner {
 
     private static final Map<Character, TokenType> SINGLE_CHAR_TOKENS = Map.ofEntries(
             Map.entry('+', TokenType.PLUS),
-            Map.entry('-', TokenType.MINUS),
             Map.entry('*', TokenType.STAR),
             Map.entry('(', TokenType.LEFT_PARENTHESIS),
             Map.entry(')', TokenType.RIGHT_PARENTHESIS),
@@ -76,6 +75,7 @@ public class Scanner {
             case '=' -> addToken(advanceIfNext('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);
             case '<' -> addToken(advanceIfNext('=') ? TokenType.LESS_EQUAL : TokenType.LESS);
             case '>' -> addToken(advanceIfNext('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER);
+            case '-' -> addToken(advanceIfNext('>') ? TokenType.ARROW : TokenType.MINUS);
             case '/' -> {
                 if (advanceIfNext('/')) {
                     while (current() != '\n' && !isAtEnd()) advance();

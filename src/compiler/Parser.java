@@ -247,6 +247,7 @@ public class Parser {
     private ParseRule getRule(TokenType tokenType) {
         return switch (tokenType) {
             case TokenType.LEFT_PARENTHESIS      -> new ParseRule(this::parseGroupExpression, this::parseCallExpression, Precedence.CALL);
+            case TokenType.LEFT_BRACE            -> new ParseRule(null, this::parseOmittedParenthesesCall, Precedence.CALL);
             case TokenType.LEFT_BRACKET          -> new ParseRule(this::parseArrayDefinitionExpression, this::parseSubscriptGetExpression, Precedence.CALL);
             case TokenType.DOT                   -> new ParseRule(null, this::parseDotExpression, Precedence.CALL);
             case TokenType.MINUS                 -> new ParseRule(this::parseUnaryExpression, this::parseBinaryExpression, Precedence.TERM);
@@ -292,7 +293,17 @@ public class Parser {
             } while (advanceIfNext(TokenType.COMMA));
         }
         expect(TokenType.RIGHT_PARENTHESIS, "Expect ')' after arguments.");
+        if (advanceIfNext(TokenType.LEFT_BRACE)) {
+            arguments.add(parseTrailingLambdaBlock());
+        }
         return new Expr.Call(leftExpression, leftParenthesis, arguments);
+    }
+
+    private Expr parseOmittedParenthesesCall(Expr expr) {
+        Token leftBrace = getPreviousToken();
+        List<Expr> arguments = new ArrayList<>();
+        arguments.add(parseTrailingLambdaBlock());
+        return new Expr.Call(expr, leftBrace, arguments);
     }
 
     private Expr parseArrayDefinitionExpression() {
@@ -401,6 +412,38 @@ public class Parser {
         Stmt.Block block = (Stmt.Block) parseBlockStatement();
 
         return new Expr.Lambda(parameters, block.subStatements);
+    }
+
+    private Expr parseTrailingLambdaBlock() {
+        List<Token> parameters = new ArrayList<>();
+        int arrowIndex = currentIndex;
+        boolean hasArrow = false;
+        while (arrowIndex < tokens.size() && tokens.get(arrowIndex).type != TokenType.EOF) {
+            TokenType type = tokens.get(arrowIndex).type;
+            if (type == TokenType.ARROW) {
+                hasArrow = true;
+                break;
+            }else if (type == TokenType.RIGHT_BRACE || type == TokenType.SEMICOLON) {
+                break;
+            }
+            arrowIndex++;
+        }
+        if (hasArrow) {
+            if (!checkCurrentType(TokenType.ARROW)) {
+                do {
+                    parameters.add(expect(TokenType.IDENTIFIER, "Expect parameter name."));
+                } while (advanceIfNext(TokenType.COMMA));
+            }
+            expect(TokenType.ARROW, "Expect '->' after lambda parameters.");
+        }
+
+        List<Stmt> body = new ArrayList<>();
+        while (!checkCurrentType(TokenType.RIGHT_BRACE) && !isAtEnd()) {
+            body.add(parseDeclaration());
+        }
+        expect(TokenType.RIGHT_BRACE, "Expect '}' after lambda body.");
+
+        return new Expr.Lambda(parameters, body);
     }
 
     private void skipToNextStatement() {
