@@ -28,11 +28,6 @@ public class Interpreter {
         globalEnvironment.define("len", new NativeArrayTools.Len());
         globalEnvironment.define("push", new NativeArrayTools.Push());
         globalEnvironment.define("removeAt", new NativeArrayTools.RemoveAt());
-        globalEnvironment.define("isKeyDown", new NativeFunctionIsKeyDown());
-        globalEnvironment.define("drawRect", new NativeFunctionDrawRect());
-        globalEnvironment.define("drawText", new NativeFunctionDrawText());
-        globalEnvironment.define("drawSprite", new NativeFunctionDrawSprite());
-        globalEnvironment.define("playSound", new NativeFunctionPlaySound());
     }
 
     public void callScriptFunction(String identifier) {

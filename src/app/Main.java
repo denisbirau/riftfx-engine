@@ -2,7 +2,6 @@ package app;
 
 import compiler.Resolver;
 import ast.Stmt;
-import engine.GameWindow;
 import error.ErrorReporter;
 import error.IErrorReporter;
 import compiler.Parser;
@@ -25,15 +24,10 @@ public class Main {
             System.exit(64);
         }
 
-        Interpreter interpreter = compileAndRun(args[0]);
-
-        if (interpreter != null) {
-            GameWindow gameWindow = new GameWindow(interpreter);
-            gameWindow.start();
-        }
+        compileAndRun(args[0]);
     }
 
-    public static Interpreter compileAndRun(String path) {
+    public static void compileAndRun(String path) {
         try {
             byte[] bytes = Files.readAllBytes(Paths.get(path));
             String sourceCode = new String(bytes, StandardCharsets.UTF_8);
@@ -54,11 +48,9 @@ public class Main {
             interpreter.interpret();
             if (errorReporter.hadError()) System.exit(70);
 
-            return interpreter;
         } catch (IOException e) {
             System.err.println("No such file or directory: " + e.getMessage());
         }
-        return null;
     }
 }
 

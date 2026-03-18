@@ -28,11 +28,6 @@ public class Resolver {
         scopes.peek().put("len", true);
         scopes.peek().put("push", true);
         scopes.peek().put("removeAt", true);
-        scopes.peek().put("isKeyDown", true);
-        scopes.peek().put("drawRect", true);
-        scopes.peek().put("drawText", true);
-        scopes.peek().put("drawSprite", true);
-        scopes.peek().put("playSound", true);
         statements.forEach(this::resolve);
         endNewScope();
     }
