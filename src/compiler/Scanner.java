@@ -17,6 +17,7 @@ public class Scanner {
     private static final Map<Character, TokenType> SINGLE_CHAR_TOKENS = Map.ofEntries(
             Map.entry('+', TokenType.PLUS),
             Map.entry('*', TokenType.STAR),
+            Map.entry('%', TokenType.MODULO),
             Map.entry('(', TokenType.LEFT_PARENTHESIS),
             Map.entry(')', TokenType.RIGHT_PARENTHESIS),
             Map.entry(';', TokenType.SEMICOLON),

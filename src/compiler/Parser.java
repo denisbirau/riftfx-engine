@@ -253,7 +253,8 @@ public class Parser {
             case TokenType.MINUS                 -> new ParseRule(this::parseUnaryExpression, this::parseBinaryExpression, Precedence.TERM);
             case TokenType.PLUS                  -> new ParseRule(null, this::parseBinaryExpression, Precedence.TERM);
             case TokenType.SLASH,
-                 TokenType.STAR                  -> new ParseRule(null, this::parseBinaryExpression, Precedence.FACTOR);
+                 TokenType.STAR,
+                 TokenType.MODULO                -> new ParseRule(null, this::parseBinaryExpression, Precedence.FACTOR);
             case TokenType.NOT                   -> new ParseRule(this::parseUnaryExpression, null, Precedence.NONE);
             case TokenType.EQUAL_EQUAL,
                  TokenType.NOT_EQUAL             -> new ParseRule(null, this::parseBinaryExpression, Precedence.EQUALITY);

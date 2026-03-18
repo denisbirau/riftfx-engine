@@ -191,6 +191,11 @@ public class Interpreter {
                 if (rightValue == 0) throw new RuntimeError("Can not divide a number by zero.", e.operator.line);
                 yield asDouble(leftValue, e.operator) / rightValue;
             }
+            case TokenType.MODULO -> {
+                double rightValue = asDouble(evaluate(e.rightExpression), e.operator);
+                if (rightValue == 0) throw new RuntimeError("Can not modulo a number by zero.", e.operator.line);
+                yield asDouble(leftValue, e.operator) % rightValue;
+            }
             case TokenType.PLUS -> {
                 Object rightValue = evaluate(e.rightExpression);
                 if (leftValue instanceof Double l && rightValue instanceof Double r) yield l + r;

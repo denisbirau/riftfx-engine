@@ -2,7 +2,7 @@ package compiler;
 
 public enum TokenType {
     // Single character tokens.
-    PLUS, MINUS, STAR, SLASH,
+    PLUS, MINUS, STAR, SLASH, MODULO,
     LEFT_PARENTHESIS, RIGHT_PARENTHESIS,
     SEMICOLON, COMMA,
     QUESTION_MARK, COLON,

@@ -181,7 +181,7 @@ let nums = [1, 2, 3, 4, 5, 6];
 
 // 1. Trailing lambda with arguments
 let evens = filter(nums) { x ->
-    return x - (x / 2) * 2 == 0; // Simple modulo check
+    return x % 2 == 0;
 };
 print evens; // [2.0, 4.0, 6.0]
 
