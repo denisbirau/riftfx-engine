@@ -30,20 +30,6 @@ public class Interpreter {
         globalEnvironment.define("removeAt", new NativeArrayTools.RemoveAt());
     }
 
-    public void callScriptFunction(String identifier) {
-        Object function = currentEnvironment.getValue(identifier);
-        if (function instanceof Callable callable) {
-            callable.call(List.of(), this);
-        }
-    }
-
-    public void callScriptFunction(String identifier, List<Object> arguments) {
-        Object function = currentEnvironment.getValue(identifier);
-        if (function instanceof Callable callable) {
-            callable.call(arguments, this);
-        }
-    }
-
     public void interpret() {
         for (Stmt statement : statements) {
             try {
@@ -101,6 +87,7 @@ public class Interpreter {
             case Expr.ArrayDefinition e -> evaluateArrayDefinition(e);
             case Expr.SubscriptGet e    -> evaluateSubscriptGet(e);
             case Expr.SubscriptSet e    -> evaluateSubscriptSet(e);
+            case Expr.Lambda       e    -> evaluateLambda(e);
         };
     }
 
@@ -139,7 +126,13 @@ public class Interpreter {
     }
 
     private void executeDef(Stmt.Def s) {
-        Function function = new Function(s, currentEnvironment, false);
+        Function function = new Function(
+                s.functionName.lexeme,
+                s.parameters,
+                s.functionBody,
+                currentEnvironment,
+                false
+        );
         currentEnvironment.define(s.functionName.lexeme, function);
     }
 
@@ -164,7 +157,13 @@ public class Interpreter {
         Map<String, Function> methods = new HashMap<>();
         for (Stmt.Def method : s.methods) {
             boolean isConstructor = method.functionName.lexeme.equals("constructor");
-            methods.put(method.functionName.lexeme, new Function(method, currentEnvironment, isConstructor));
+            methods.put(method.functionName.lexeme, new Function(
+                    method.functionName.lexeme,
+                    method.parameters,
+                    method.functionBody,
+                    currentEnvironment,
+                    isConstructor
+            ));
         }
         var myClass = new Class(s.className.lexeme, methods, (Class) superclass);
         if (superclass != null) currentEnvironment = currentEnvironment.enclosingEnvironment;
@@ -289,6 +288,10 @@ public class Interpreter {
             return value;
         }
         throw new RuntimeError("Only arrays can be sub scripted.", e.leftBracket.line);
+    }
+
+    private Object evaluateLambda(Expr.Lambda e) {
+        return new Function(null, e.parameters, e.body, currentEnvironment, false);
     }
 
     // Helper methods

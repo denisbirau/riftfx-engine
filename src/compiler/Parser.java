@@ -272,6 +272,7 @@ public class Parser {
             case TokenType.IDENTIFIER            -> new ParseRule(this::parseIdentifier, null, Precedence.NONE);
             case TokenType.THIS                  -> new ParseRule(this::parseThisExpression, null, Precedence.NONE);
             case TokenType.SUPER                 -> new ParseRule(this::parseSuperExpression, null, Precedence.NONE);
+            case TokenType.DEF                   -> new ParseRule(this::parseLambdaExpression, null, Precedence.NONE);
             default                              -> new ParseRule(null, null, Precedence.NONE);
         };
     }
@@ -384,6 +385,22 @@ public class Parser {
         expect(TokenType.DOT, "Expect '.' after 'super'.");
         Token method = expect(TokenType.IDENTIFIER, "Expect superclass method name.");
         return new Expr.Super(keyword, method);
+    }
+
+    private Expr parseLambdaExpression() {
+        expect(TokenType.LEFT_PARENTHESIS, "Expect '(' after 'def' keyword for anonymous functions.");
+        List<Token> parameters = new ArrayList<>();
+        if (!checkCurrentType(TokenType.RIGHT_PARENTHESIS)) {
+            do {
+                parameters.add(expect(TokenType.IDENTIFIER, "Expect parameter name."));
+            } while (advanceIfNext(TokenType.COMMA));
+        }
+        expect(TokenType.RIGHT_PARENTHESIS, "Expect ')' after parameters.");
+
+        expect(TokenType.LEFT_BRACE, "Expect '{' before body.");
+        Stmt.Block block = (Stmt.Block) parseBlockStatement();
+
+        return new Expr.Lambda(parameters, block.subStatements);
     }
 
     private void skipToNextStatement() {

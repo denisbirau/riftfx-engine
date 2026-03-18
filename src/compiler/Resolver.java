@@ -64,6 +64,7 @@ public class Resolver {
             case Expr.ArrayDefinition e -> e.elements.forEach(this::resolve);
             case Expr.SubscriptGet e    -> { resolve(e.array); resolve(e.index); }
             case Expr.SubscriptSet e    -> { resolve(e.array); resolve(e.index); resolve(e.value); }
+            case Expr.Lambda e          -> resolveLambda(e);
         }
     }
 
@@ -198,6 +199,21 @@ public class Resolver {
             errorReporter.report("No superclass defined for 'super'.", e.keyword.line);
         else
             resolveLocal(e, e.keyword);
+    }
+
+    private void resolveLambda(Expr.Lambda e) {
+        beginNewScope();
+        for (Token parameter : e.parameters) {
+            declare(parameter);
+            define(parameter);
+        }
+        boolean aux = insideFunction;
+        insideFunction = true;
+        for (Stmt stmt : e.body) {
+            resolve(stmt);
+        }
+        insideFunction = aux;
+        endNewScope();
     }
 
     // Helper methods

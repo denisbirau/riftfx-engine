@@ -19,7 +19,8 @@ public sealed abstract class Expr permits
         Expr.Super,
         Expr.ArrayDefinition,
         Expr.SubscriptGet,
-        Expr.SubscriptSet
+        Expr.SubscriptSet,
+        Expr.Lambda
 {
 
     public static final class Literal extends Expr {
@@ -27,11 +28,6 @@ public sealed abstract class Expr permits
 
         public Literal(Object value) {
             this.value = value;
-        }
-
-        @Override
-        public String toString() {
-            return value == null ? "null" : "Literal(" + value + ")";
         }
     }
 
@@ -42,11 +38,6 @@ public sealed abstract class Expr permits
         public Unary(Token operator, Expr expression) {
             this.operator = operator;
             this.expression = expression;
-        }
-
-        @Override
-        public String toString() {
-            return "Unary(" + operator + expression + ")";
         }
     }
 
@@ -60,11 +51,6 @@ public sealed abstract class Expr permits
             this.operator = operator;
             this.rightExpression = rightExpression;
         }
-
-        @Override
-        public String toString() {
-            return "Binary(" + leftExpression + " " + operator + " " + rightExpression + ")";
-        }
     }
 
     public static final class Ternary extends Expr {
@@ -77,11 +63,6 @@ public sealed abstract class Expr permits
             this.thenExpression = thenExpression;
             this.elseExpression = elseExpression;
         }
-
-        @Override
-        public String toString() {
-            return "Ternary(" + condition + "," + thenExpression + "," + elseExpression + ")";
-        }
     }
 
     public static final class Group extends Expr {
@@ -89,11 +70,6 @@ public sealed abstract class Expr permits
 
         public Group(Expr expression) {
             this.expression = expression;
-        }
-
-        @Override
-        public String toString() {
-            return "Group(" + expression.toString() + ")";
         }
     }
 
@@ -103,11 +79,6 @@ public sealed abstract class Expr permits
 
         public Lookup(Token identifier) {
             this.identifier = identifier;
-        }
-
-        @Override
-        public String toString() {
-            return "Variable(" + identifier + ")";
         }
     }
 
@@ -119,11 +90,6 @@ public sealed abstract class Expr permits
         public Assignment(Token identifier, Expr expression) {
             this.identifier = identifier;
             this.expression = expression;
-        }
-
-        @Override
-        public String toString() {
-            return "Assignment(" + identifier + " = " + expression + ")";
         }
     }
 
@@ -137,17 +103,6 @@ public sealed abstract class Expr permits
             this.leftParenthesis = leftParenthesis;
             this.arguments = arguments;
         }
-
-        @Override
-        public String toString() {
-            StringBuilder builder = new StringBuilder("Call(");
-            builder.append(calleeExpression).append(", ");
-            for (Expr arg : arguments) {
-                builder.append(arg).append(", ");
-            }
-            builder.append(")");
-            return builder.toString();
-        }
     }
 
     public static final class Get extends Expr {
@@ -157,11 +112,6 @@ public sealed abstract class Expr permits
         public Get(Expr calleeExpression, Token property) {
             this.calleeExpression = calleeExpression;
             this.property = property;
-        }
-
-        @Override
-        public String toString() {
-            return "Get(" + calleeExpression + ", " + property + ")";
         }
     }
 
@@ -175,11 +125,6 @@ public sealed abstract class Expr permits
             this.property = property;
             this.expression = expression;
         }
-
-        @Override
-        public String toString() {
-            return "Set(" + calleeExpression + ", " + property + ", " + expression + ")";
-        }
     }
 
     public static final class This extends Expr {
@@ -188,11 +133,6 @@ public sealed abstract class Expr permits
 
         public This(Token keyword) {
             this.keyword = keyword;
-        }
-
-        @Override
-        public String toString() {
-            return "This()";
         }
     }
 
@@ -205,11 +145,6 @@ public sealed abstract class Expr permits
             this.keyword = keyword;
             this.method = method;
         }
-
-        @Override
-        public String toString() {
-            return "Super(" + method + ")";
-        }
     }
 
     public static final class ArrayDefinition extends Expr {
@@ -217,11 +152,6 @@ public sealed abstract class Expr permits
 
         public ArrayDefinition(List<Expr> elements) {
             this.elements = elements;
-        }
-
-        @Override
-        public String toString() {
-            return "Array(" + this.elements + ")";
         }
     }
 
@@ -234,11 +164,6 @@ public sealed abstract class Expr permits
             this.array = array;
             this.leftBracket = leftBracket;
             this.index = index;
-        }
-
-        @Override
-        public String toString() {
-            return "SubscriptGet(" + array + "[" + index + "])";
         }
     }
 
@@ -254,10 +179,15 @@ public sealed abstract class Expr permits
             this.index = index;
             this.value = value;
         }
+    }
 
-        @Override
-        public String toString() {
-            return "SubscriptSet(" + array + "[" + index + "]" + " = " + value + ")";
+    public static final class Lambda extends Expr {
+        public final List<Token> parameters;
+        public final List<Stmt> body;
+
+        public Lambda(List<Token> parameters, List<Stmt> body) {
+            this.parameters = parameters;
+            this.body = body;
         }
     }
 }
