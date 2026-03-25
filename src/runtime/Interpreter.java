@@ -6,12 +6,10 @@ import error.IErrorReporter;
 import compiler.Token;
 import compiler.TokenType;
 import error.RuntimeError;
+import javafx.scene.layout.Pane;
 import stdlib.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Interpreter {
     Environment globalEnvironment = new Environment();
@@ -19,6 +17,8 @@ public class Interpreter {
 
     private final List<Stmt> statements;
     private final IErrorReporter errorReporter;
+
+    public final Stack<Pane> uiContext = new Stack<>();
 
     public Interpreter(List<Stmt> statements, IErrorReporter errorReporter) {
         this.statements = statements;
@@ -29,6 +29,7 @@ public class Interpreter {
         globalEnvironment.define("push", new NativeArrayTools.Push());
         globalEnvironment.define("removeAt", new NativeArrayTools.RemoveAt());
         globalEnvironment.define("Window", new NativeUI.Window());
+        globalEnvironment.define("Text", new NativeUI.Text());
     }
 
     public void interpret() {
