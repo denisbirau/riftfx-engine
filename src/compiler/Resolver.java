@@ -28,6 +28,7 @@ public class Resolver {
         scopes.peek().put("len", true);
         scopes.peek().put("push", true);
         scopes.peek().put("removeAt", true);
+        scopes.peek().put("Window", true);
         statements.forEach(this::resolve);
         endNewScope();
     }

@@ -28,6 +28,7 @@ public class Interpreter {
         globalEnvironment.define("len", new NativeArrayTools.Len());
         globalEnvironment.define("push", new NativeArrayTools.Push());
         globalEnvironment.define("removeAt", new NativeArrayTools.RemoveAt());
+        globalEnvironment.define("Window", new NativeUI.Window());
     }
 
     public void interpret() {

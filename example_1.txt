@@ -1,0 +1,7 @@
+print "Starting the UI engine...";
+
+Window("My Custom App") {
+    print "Inside the window lambda! Building the UI tree...";
+};
+
+print "Window has been dispatched to the JavaFX thread.";

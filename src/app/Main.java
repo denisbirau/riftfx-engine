@@ -15,6 +15,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 
+import javafx.application.Platform;
+
 public class Main {
     private static final IErrorReporter errorReporter = new ErrorReporter();
 
@@ -31,6 +33,9 @@ public class Main {
         try {
             byte[] bytes = Files.readAllBytes(Paths.get(path));
             String sourceCode = new String(bytes, StandardCharsets.UTF_8);
+
+            Platform.startup(() -> {});
+            Platform.setImplicitExit(false);
 
             Scanner scanner = new Scanner(sourceCode, errorReporter);
             List<Token> tokens = scanner.scan();
