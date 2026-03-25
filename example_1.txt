@@ -1,9 +1,29 @@
 print "Starting the UI engine...";
 
 Window("My Custom App") {
-    Text("Hello World!");
-    Text("No add children boilerplate");
-    Text("#JavaFX");
+    Row {
+        Column {
+            Text("Hello World!");
+            Row {
+                Text("No add children boilerplate");
+            };
+            Row {
+                Text("#JavaFX");
+            };
+            Button("Click me") {
+                print "Click";
+            };
+        };
+        Column {
+            Text("Another Column");
+            Row {
+                Text("Hope it works");
+            };
+            Row {
+                Text("#JavaFX");
+            };
+        };
+    };
 };
 
 print "Window has been dispatched to the JavaFX thread.";

@@ -30,6 +30,9 @@ public class Resolver {
         scopes.peek().put("removeAt", true);
         scopes.peek().put("Window", true);
         scopes.peek().put("Text", true);
+        scopes.peek().put("Column", true);
+        scopes.peek().put("Row", true);
+        scopes.peek().put("Button", true);
         statements.forEach(this::resolve);
         endNewScope();
     }

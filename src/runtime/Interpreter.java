@@ -30,6 +30,9 @@ public class Interpreter {
         globalEnvironment.define("removeAt", new NativeArrayTools.RemoveAt());
         globalEnvironment.define("Window", new NativeUI.Window());
         globalEnvironment.define("Text", new NativeUI.Text());
+        globalEnvironment.define("Column", new NativeUI.Column());
+        globalEnvironment.define("Row", new NativeUI.Row());
+        globalEnvironment.define("Button", new NativeUI.Button());
     }
 
     public void interpret() {
