@@ -1,17 +1,22 @@
 print "Starting the UI engine...";
 
+let name = State("name");
+
 Window("My Custom App") {
     Row {
         Column {
-            Text("Hello World!");
-            Row {
-                Text("No add children boilerplate");
-            };
-            Row {
-                Text("#JavaFX");
-            };
-            Button("Click me") {
-                print "Click";
+            Observe (name) {
+                Text("Hello " + name.get() + "!");
+                Row {
+                    Text("No add children boilerplate");
+                };
+                Row {
+                    Text("#JavaFX");
+                };
+                Button("Click me") {
+                    print "Click";
+                    name.set("Denis");
+                };
             };
         };
         Column {

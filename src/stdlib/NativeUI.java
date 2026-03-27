@@ -11,6 +11,7 @@ import javafx.stage.Stage;
 import runtime.Callable;
 import runtime.Interpreter;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class NativeUI {
@@ -127,6 +128,57 @@ public class NativeUI {
                 throw new RuntimeError("Button should be called inside an UI component.", 0);
             }
             interpreter.uiContext.peek().getChildren().add(button);
+            return null;
+        }
+    }
+
+    public static class State {
+        public Object value;
+        public final List<Runnable> listeners = new ArrayList<>();
+
+        public State(Object value) {
+            this.value = value;
+        }
+    }
+
+    public static class CreateState implements Callable {
+        @Override
+        public int arity() {
+            return 1;
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            return new State(arguments.getFirst());
+        }
+    }
+
+    public static class Observe implements Callable {
+        @Override
+        public int arity() {
+            return 2;
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            State state = (State) arguments.get(0);
+            Callable lambda = (Callable) arguments.get(1);
+            VBox container = new VBox();
+            if (interpreter.uiContext.isEmpty()) {
+                throw new RuntimeError("Observe must be called inside an UI container.", 0);
+            }
+            interpreter.uiContext.peek().getChildren().add(container);
+            Runnable recompose = () -> Platform.runLater(() -> {
+                container.getChildren().clear();
+                interpreter.uiContext.push(container);
+                try {
+                    lambda.call(List.of(), interpreter);
+                } finally {
+                    interpreter.uiContext.pop();
+                }
+            });
+            state.listeners.add(recompose);
+            recompose.run();
             return null;
         }
     }

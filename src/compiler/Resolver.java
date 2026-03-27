@@ -33,6 +33,8 @@ public class Resolver {
         scopes.peek().put("Column", true);
         scopes.peek().put("Row", true);
         scopes.peek().put("Button", true);
+        scopes.peek().put("State", true);
+        scopes.peek().put("Observe", true);
         statements.forEach(this::resolve);
         endNewScope();
     }

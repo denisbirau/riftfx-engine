@@ -33,6 +33,8 @@ public class Interpreter {
         globalEnvironment.define("Column", new NativeUI.Column());
         globalEnvironment.define("Row", new NativeUI.Row());
         globalEnvironment.define("Button", new NativeUI.Button());
+        globalEnvironment.define("State", new NativeUI.CreateState());
+        globalEnvironment.define("Observe", new NativeUI.Observe());
     }
 
     public void interpret() {
@@ -251,6 +253,39 @@ public class Interpreter {
     private Object evaluateGet(Expr.Get e) {
         Object callee = evaluate(e.calleeExpression);
         if (callee instanceof Instance instance) return instance.get(e.property);
+        if (callee instanceof NativeUI.State state) {
+            String method = e.property.lexeme;
+            if (method.equals("get")) {
+                return new Callable() {
+                    @Override
+                    public int arity() {
+                        return 0;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        return state.value;
+                    }
+                };
+            } else if (method.equals("set")) {
+                return new Callable() {
+                    @Override
+                    public int arity() {
+                        return 1;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        state.value = arguments.getFirst();
+                        for (Runnable listener : state.listeners) {
+                            listener.run();
+                        }
+                        return null;
+                    }
+                };
+            }
+            throw new RuntimeError("Undefined property: " + method + ".", e.property.line);
+        }
         throw new RuntimeError("Only instances have properties.", e.property.line);
     }
 
