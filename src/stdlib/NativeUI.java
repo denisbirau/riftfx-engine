@@ -46,13 +46,24 @@ public class NativeUI {
     public static class Text implements Callable {
         @Override
         public int arity() {
-            return 1;
+            return -1;
         }
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
+            if (arguments.isEmpty()) {
+                throw new RuntimeError("Text component requires at least one argument.", 0);
+            }
             String content = (String) arguments.getFirst();
             Label label = new Label(content);
+            StringBuilder css = new StringBuilder();
+            if (arguments.size() > 1 && arguments.get(1) instanceof Double fontSize) {
+                css.append("-fx-font-size: ").append(fontSize).append("px; ");
+            }
+            if (arguments.size() > 2 && arguments.get(2) instanceof String color) {
+                css.append("-fx-text-fill: ").append(color).append("; ");
+            }
+            label.setStyle(css.toString());
             if (interpreter.uiContext.isEmpty()) {
                 throw new RuntimeError("Text component must be called inside an UI container.", 0);
             }
@@ -65,14 +76,25 @@ public class NativeUI {
     public static class Column implements Callable {
         @Override
         public int arity() {
-            return 1;
+            return -1;
         }
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            Callable lambda = (Callable) arguments.getFirst();
+            if (arguments.isEmpty()) {
+                throw new RuntimeError("Column component must have at least one argument.", 0);
+            }
+            Callable lambda;
             VBox column = new VBox();
-            column.setSpacing(5);
+            if (arguments.size() == 2) {
+                Double spacing = (Double) arguments.getFirst();
+                column.setSpacing(spacing);
+                column.setStyle("-fx-padding: " + spacing + "px;");
+                lambda = (Callable) arguments.get(1);
+            } else {
+                column.setSpacing(5);
+                lambda = (Callable) arguments.getFirst();
+            }
             if (interpreter.uiContext.isEmpty()) {
                 throw new RuntimeError("Column must be called inside an UI container.", 0);
             }
@@ -90,14 +112,25 @@ public class NativeUI {
     public static class Row implements Callable {
         @Override
         public int arity() {
-            return 1;
+            return -1;
         }
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            Callable lambda = (Callable) arguments.getFirst();
+            if (arguments.isEmpty()) {
+                throw new RuntimeError("Row component must have at least one argument.", 0);
+            }
+            Callable lambda;
             HBox row = new HBox();
-            row.setSpacing(10);
+            if (arguments.size() == 2) {
+                Double spacing = (Double) arguments.getFirst();
+                row.setSpacing(spacing);
+                row.setStyle("-fx-padding: " + spacing + "px;");
+                lambda = (Callable) arguments.get(1);
+            } else {
+                row.setSpacing(10);
+                lambda = (Callable) arguments.getFirst();
+            }
             if (interpreter.uiContext.isEmpty()) {
                 throw new RuntimeError("Row must be called inside an UI container.", 0);
             }

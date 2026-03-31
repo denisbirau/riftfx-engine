@@ -244,7 +244,7 @@ public class Interpreter {
         if (!(callee instanceof Callable callable)) {
             throw new RuntimeError("Only functions or classes can be called.", e.leftParenthesis.line);
         }
-        if (callable.arity() != arguments.size()) {
+        if (callable.arity() != -1 && callable.arity() != arguments.size()) {
             throw new RuntimeError("Expected " + callable.arity() + " arguments but got " + arguments.size() + ".", e.leftParenthesis.line);
         }
         return callable.call(arguments, this);

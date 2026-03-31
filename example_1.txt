@@ -4,11 +4,11 @@ let name = State("name");
 
 Window("My Custom App") {
     Row {
-        Column {
+        Column(50) {
             Observe (name) {
                 Text("Hello " + name.get() + "!");
-                Row {
-                    Text("No add children boilerplate");
+                Row(40) {
+                    Text("No add children boilerplate", 50, "red");
                 };
                 Row {
                     Text("#JavaFX");
