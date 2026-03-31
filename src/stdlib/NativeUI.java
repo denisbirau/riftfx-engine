@@ -215,4 +215,41 @@ public class NativeUI {
             return null;
         }
     }
+
+    public static class TextField implements Callable {
+        @Override
+        public int arity() {
+            return 1;
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            if (!(arguments.getFirst() instanceof State state)) {
+                throw new RuntimeError("TextField requires state object.", 0);
+            }
+            javafx.scene.control.TextField textField = new javafx.scene.control.TextField();
+            textField.setText(state.value != null ? state.value.toString() : "");
+            textField.textProperty().addListener((observable, oldValue, newValue) -> {
+                if (!newValue.equals(state.value)) {
+                    state.value = newValue;
+                    for (Runnable listener : state.listeners) {
+                        listener.run();
+                    }
+                }
+            });
+            state.listeners.add(() -> {
+                Platform.runLater(() -> {
+                    String newStateValue = state.value != null ? state.value.toString() : "";
+                    if (!textField.getText().equals(newStateValue)) {
+                        textField.setText(newStateValue);
+                    }
+                });
+            });
+            if (interpreter.uiContext.isEmpty()) {
+                throw new RuntimeError("TextField must be called inside an UI container.", 0);
+            }
+            interpreter.uiContext.peek().getChildren().add(textField);
+            return null;
+        }
+    }
 }

@@ -5,6 +5,7 @@ let name = State("name");
 Window("My Custom App") {
     Row {
         Column(50) {
+            TextField(name);
             Observe (name) {
                 Text("Hello " + name.get() + "!");
                 Row(40) {

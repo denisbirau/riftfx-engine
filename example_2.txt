@@ -1,0 +1,53 @@
+print "Task Manager App";
+
+let tasks = State([]);
+let input = State("");
+
+Window("My To-Do List") {
+    Column(15) {
+
+        Text("Task Manager", 24, "black");
+
+        // 1. THE INPUT AREA
+        Row(10) {
+            TextField(input);
+
+            Button("Add Task") {
+                if (input.get() != "") {
+                    let currentTasks = tasks.get();
+                    push(currentTasks, input.get()); // Add to the array
+
+                    tasks.set(currentTasks); // TRIGGER THE UI REDRAW!
+                    input.set(""); // Clear the text field
+                }
+            };
+        };
+
+        // 2. THE DYNAMIC LIST RENDERER
+        Observe(tasks) {
+            let currentTasks = tasks.get();
+
+            if (len(currentTasks) == 0) {
+                Text("No tasks yet. You're all caught up!", 14, "gray");
+            }
+
+            for (let i = 0; i < len(currentTasks); i = i + 1) {
+                // VERY IMPORTANT: Capture the current index in a block-scoped variable
+                // so the Delete button's closure remembers the correct index!
+                let taskIndex = i;
+                let taskName = currentTasks[taskIndex];
+
+                Row(10) {
+                    Text("- " + taskName, 16, "#333333");
+
+                    Button("Delete") {
+                        let tempTasks = tasks.get();
+                        removeAt(tempTasks, taskIndex);
+                        tasks.set(tempTasks); // Trigger redraw
+                    };
+                };
+            }
+        };
+
+    };
+};

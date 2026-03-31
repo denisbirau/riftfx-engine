@@ -35,6 +35,7 @@ public class Interpreter {
         globalEnvironment.define("Button", new NativeUI.Button());
         globalEnvironment.define("State", new NativeUI.CreateState());
         globalEnvironment.define("Observe", new NativeUI.Observe());
+        globalEnvironment.define("TextField", new NativeUI.TextField());
     }
 
     public void interpret() {
