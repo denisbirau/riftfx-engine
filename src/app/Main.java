@@ -1,13 +1,12 @@
 package app;
 
-import compiler.Resolver;
+import resolution.Resolver;
 import ast.Stmt;
 import error.ErrorReporter;
-import error.IErrorReporter;
-import compiler.Parser;
-import compiler.Scanner;
-import compiler.Token;
-import runtime.Interpreter;
+import parser.Parser;
+import scanner.Scanner;
+import scanner.Token;
+import interpreter.Interpreter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -18,8 +17,6 @@ import java.util.List;
 import javafx.application.Platform;
 
 public class Main {
-    private static final IErrorReporter errorReporter = new ErrorReporter();
-
     public static void main(String[] args) {
         if (args.length != 1) {
             System.out.println("Invalid number of parameters.");
@@ -35,27 +32,38 @@ public class Main {
             String sourceCode = new String(bytes, StandardCharsets.UTF_8);
 
             Platform.startup(() -> {});
-            Platform.setImplicitExit(false);
 
-            Scanner scanner = new Scanner(sourceCode, errorReporter);
+            Scanner scanner = new Scanner(sourceCode);
             List<Token> tokens = scanner.scan();
-            if (errorReporter.hadError()) System.exit(65);
+            if (ErrorReporter.hadError()) exit(65);
 
-            Parser parser = new Parser(tokens, errorReporter);
+            Parser parser = new Parser(tokens);
             List<Stmt> statements = parser.parse();
-            if (errorReporter.hadError()) System.exit(65);
+            if (ErrorReporter.hadError()) exit(65);
 
-            Resolver resolver = new Resolver(errorReporter);
+            Resolver resolver = new Resolver();
             resolver.resolve(statements);
-            if (errorReporter.hadError()) System.exit(65);
+            if (ErrorReporter.hadError()) exit(65);
 
-            Interpreter interpreter = new Interpreter(statements, errorReporter);
+            Interpreter interpreter = new Interpreter(statements);
             interpreter.interpret();
-            if (errorReporter.hadError()) System.exit(70);
+            if (ErrorReporter.hadError()) exit(70);
+
+            Platform.runLater(() -> {
+                if (javafx.stage.Window.getWindows().isEmpty()) {
+                    Platform.exit();
+                    System.exit(0);
+                }
+            });
 
         } catch (IOException e) {
             System.err.println("No such file or directory: " + e.getMessage());
         }
+    }
+
+    private static void exit(int code) {
+        Platform.exit();
+        System.exit(code);
     }
 }
 

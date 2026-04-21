@@ -1,7 +1,7 @@
-package runtime;
+package interpreter;
 
 import ast.Stmt;
-import compiler.Token;
+import scanner.Token;
 
 import java.util.List;
 
@@ -39,22 +39,30 @@ class Function implements Callable {
     @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
         Environment newEnvironment = new Environment(this.environment);
-        for (int i = 0; i < arguments.size(); i++) {
-            newEnvironment.define(parameters.get(i).lexeme, arguments.get(i));
+        for (var i = 0; i < arguments.size(); i++) {
+            newEnvironment.define(parameters.get(i).lexeme(), arguments.get(i));
         }
 
-        Environment previous = interpreter.currentEnvironment;
+        Environment previousEnvironment = interpreter.currentEnvironment;
         interpreter.currentEnvironment = newEnvironment;
-        for (Stmt statement : body) {
-            try {
+
+        try {
+            for (var statement : body) {
                 interpreter.execute(statement);
-            } catch (Return returnStmt) {
-                interpreter.currentEnvironment = previous;
-                return returnStmt.value;
             }
+        } catch (Return returnStatement) {
+            if (isConstructor) {
+                return this.environment.getAt("this", 0);
+            }
+            return returnStatement.value;
+        } finally {
+            interpreter.currentEnvironment = previousEnvironment;
         }
-        interpreter.currentEnvironment = previous;
-        if (isConstructor) return this.environment.getValue("this");
+
+        if (isConstructor) {
+            return this.environment.getAt("this", 0);
+        }
+
         return null;
     }
 }

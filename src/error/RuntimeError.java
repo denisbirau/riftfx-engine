@@ -1,11 +1,16 @@
 package error;
 
-public class RuntimeError extends RuntimeException {
-    public final String message;
-    public final int line;
+import scanner.Token;
 
-    public RuntimeError(String message, int line) {
-        this.message = message;
-        this.line = line;
+public class RuntimeError extends RuntimeException {
+    public final Token token;
+
+    public RuntimeError(String message, Token token) {
+        super(message);
+        this.token = token;
+    }
+
+    public Token getToken() {
+        return token;
     }
 }

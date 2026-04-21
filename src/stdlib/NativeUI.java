@@ -1,6 +1,6 @@
 package stdlib;
 
-import error.RuntimeError;
+import interpreter.NativeObject;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -8,8 +8,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import runtime.Callable;
-import runtime.Interpreter;
+import interpreter.Callable;
+import interpreter.Interpreter;
+import scanner.Token;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,8 +24,12 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            String title = (String) arguments.get(0);
-            Callable lambda = (Callable) arguments.get(1);
+            if (!(arguments.get(0) instanceof String title)) {
+                throw new RuntimeException("Window title must be a string.");
+            }
+            if (!(arguments.get(1) instanceof Callable lambda)) {
+                throw new RuntimeException("Window requires a lambda function.");
+            }
             Platform.runLater(() -> {
                 Stage stage = new Stage();
                 stage.setTitle(title);
@@ -46,13 +51,18 @@ public class NativeUI {
     public static class Text implements Callable {
         @Override
         public int arity() {
-            return -1;
+            return 1;
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 1;
         }
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
             if (arguments.isEmpty()) {
-                throw new RuntimeError("Text component requires at least one argument.", 0);
+                throw new RuntimeException("Text component requires at least one argument.");
             }
             String content = (String) arguments.getFirst();
             Label label = new Label(content);
@@ -65,7 +75,7 @@ public class NativeUI {
             }
             label.setStyle(css.toString());
             if (interpreter.uiContext.isEmpty()) {
-                throw new RuntimeError("Text component must be called inside an UI container.", 0);
+                throw new RuntimeException("Text component must be called inside an UI container.");
             }
             Pane parent = interpreter.uiContext.peek();
             parent.getChildren().add(label);
@@ -76,18 +86,22 @@ public class NativeUI {
     public static class Column implements Callable {
         @Override
         public int arity() {
-            return -1;
+            return 1;
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 1;
         }
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
             if (arguments.isEmpty()) {
-                throw new RuntimeError("Column component must have at least one argument.", 0);
+                throw new RuntimeException("Column component must have at least one argument.");
             }
             Callable lambda;
             VBox column = new VBox();
-            if (arguments.size() == 2) {
-                Double spacing = (Double) arguments.getFirst();
+            if (arguments.size() == 2 && arguments.getFirst() instanceof Double spacing) {
                 column.setSpacing(spacing);
                 column.setStyle("-fx-padding: " + spacing + "px;");
                 lambda = (Callable) arguments.get(1);
@@ -96,7 +110,7 @@ public class NativeUI {
                 lambda = (Callable) arguments.getFirst();
             }
             if (interpreter.uiContext.isEmpty()) {
-                throw new RuntimeError("Column must be called inside an UI container.", 0);
+                throw new RuntimeException("Column must be called inside an UI container.");
             }
             interpreter.uiContext.peek().getChildren().add(column);
             interpreter.uiContext.push(column);
@@ -112,18 +126,22 @@ public class NativeUI {
     public static class Row implements Callable {
         @Override
         public int arity() {
-            return -1;
+            return 1;
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 1;
         }
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
             if (arguments.isEmpty()) {
-                throw new RuntimeError("Row component must have at least one argument.", 0);
+                throw new RuntimeException("Row component must have at least one argument.");
             }
             Callable lambda;
             HBox row = new HBox();
-            if (arguments.size() == 2) {
-                Double spacing = (Double) arguments.getFirst();
+            if (arguments.size() == 2 && arguments.getFirst() instanceof Double spacing) {
                 row.setSpacing(spacing);
                 row.setStyle("-fx-padding: " + spacing + "px;");
                 lambda = (Callable) arguments.get(1);
@@ -132,7 +150,7 @@ public class NativeUI {
                 lambda = (Callable) arguments.getFirst();
             }
             if (interpreter.uiContext.isEmpty()) {
-                throw new RuntimeError("Row must be called inside an UI container.", 0);
+                throw new RuntimeException("Row must be called inside an UI container.");
             }
             interpreter.uiContext.peek().getChildren().add(row);
             interpreter.uiContext.push(row);
@@ -156,21 +174,69 @@ public class NativeUI {
             String text = (String) arguments.get(0);
             Callable lambda = (Callable) arguments.get(1);
             javafx.scene.control.Button button = new javafx.scene.control.Button(text);
-            button.setOnAction(_ -> lambda.call(List.of(), interpreter));
+            button.setOnAction(_ -> {
+                try {
+                    lambda.call(List.of(), interpreter);
+                } catch (RuntimeException e) {
+                    System.err.println("UI Error: " + e.getMessage());
+                }
+            });
             if (interpreter.uiContext.isEmpty()) {
-                throw new RuntimeError("Button should be called inside an UI component.", 0);
+                throw new RuntimeException("Button should be called inside an UI component.");
             }
             interpreter.uiContext.peek().getChildren().add(button);
             return null;
         }
     }
 
-    public static class State {
+    public interface UIListener {
+        boolean update(); // Returns true if the update was successful, false if the UI element is dead
+    }
+
+    public static class State implements NativeObject {
         public Object value;
-        public final List<Runnable> listeners = new ArrayList<>();
+        public final List<UIListener> listeners = new ArrayList<>();
 
         public State(Object value) {
             this.value = value;
+        }
+
+        @Override
+        public Object getMember(Token member) {
+            if (member.lexeme().equals("get")) {
+                return new Callable() {
+                    @Override
+                    public int arity() {
+                        return 0;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        return value;
+                    }
+                };
+            }
+            if (member.lexeme().equals("set")) {
+                return new Callable() {
+                    @Override
+                    public int arity() {
+                        return 1;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        value = arguments.getFirst();
+                        listeners.removeIf(listener -> !listener.update());
+                        return null;
+                    }
+                };
+            }
+            throw new RuntimeException("Undefined property: " + member.lexeme() + ".");
+        }
+
+        @Override
+        public void setMember(Token member, Object value) {
+            throw new RuntimeException("Cannot directly set properties on a State object. Use .set()");
         }
     }
 
@@ -198,20 +264,35 @@ public class NativeUI {
             Callable lambda = (Callable) arguments.get(1);
             VBox container = new VBox();
             if (interpreter.uiContext.isEmpty()) {
-                throw new RuntimeError("Observe must be called inside an UI container.", 0);
+                throw new RuntimeException("Observe must be called inside an UI container.");
             }
             interpreter.uiContext.peek().getChildren().add(container);
-            Runnable recompose = () -> Platform.runLater(() -> {
-                container.getChildren().clear();
-                interpreter.uiContext.push(container);
-                try {
-                    lambda.call(List.of(), interpreter);
-                } finally {
-                    interpreter.uiContext.pop();
+            UIListener recompose = () -> {
+                // 1. THE LIFECYCLE CHECK
+                // If an outer Observe cleared the screen, this container was orphaned.
+                // Returning false tells the State object to permanently delete this listener.
+                if (container.getParent() == null && container.getScene() == null) {
+                    return false;
                 }
-            });
+
+                // 2. THE RECOMPOSITION
+                Platform.runLater(() -> {
+                    container.getChildren().clear();
+                    interpreter.uiContext.push(container);
+                    try {
+                        lambda.call(List.of(), interpreter);
+                    } catch (RuntimeException e) {
+                        // Safe catch so a script error doesn't crash the JavaFX thread!
+                        System.err.println("Recomposition Error: " + e.getMessage());
+                    } finally {
+                        interpreter.uiContext.pop();
+                    }
+                });
+
+                return true; // Still alive, keep listening!
+            };
             state.listeners.add(recompose);
-            recompose.run();
+            recompose.update();
             return null;
         }
     }
@@ -225,28 +306,31 @@ public class NativeUI {
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
             if (!(arguments.getFirst() instanceof State state)) {
-                throw new RuntimeError("TextField requires state object.", 0);
+                throw new RuntimeException("TextField requires state object.");
             }
             javafx.scene.control.TextField textField = new javafx.scene.control.TextField();
             textField.setText(state.value != null ? state.value.toString() : "");
-            textField.textProperty().addListener((observable, oldValue, newValue) -> {
+            textField.textProperty().addListener((_, _, newValue) -> {
                 if (!newValue.equals(state.value)) {
                     state.value = newValue;
-                    for (Runnable listener : state.listeners) {
-                        listener.run();
-                    }
+                    state.listeners.removeIf(listener -> !listener.update());
                 }
             });
             state.listeners.add(() -> {
+                // If this text field was removed from the screen, tell State to delete this listener!
+                if (textField.getParent() == null && textField.getScene() == null) {
+                    return false;
+                }
                 Platform.runLater(() -> {
                     String newStateValue = state.value != null ? state.value.toString() : "";
                     if (!textField.getText().equals(newStateValue)) {
                         textField.setText(newStateValue);
                     }
                 });
+                return true;
             });
             if (interpreter.uiContext.isEmpty()) {
-                throw new RuntimeError("TextField must be called inside an UI container.", 0);
+                throw new RuntimeException("TextField must be called inside an UI container.");
             }
             interpreter.uiContext.peek().getChildren().add(textField);
             return null;

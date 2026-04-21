@@ -1,4 +1,4 @@
-package runtime;
+package interpreter;
 
 class Break extends RuntimeException {
     final int line;
