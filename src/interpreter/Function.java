@@ -37,6 +37,11 @@ class Function implements Callable {
     }
 
     @Override
+    public List<String> parameterNames() {
+        return parameters.stream().map(Token::lexeme).toList();
+    }
+
+    @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
         Environment newEnvironment = new Environment(this.environment);
         for (var i = 0; i < arguments.size(); i++) {

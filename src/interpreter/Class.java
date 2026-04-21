@@ -38,6 +38,15 @@ class Class implements Callable {
     }
 
     @Override
+    public List<String> parameterNames() {
+        Function constructor = getMethod("constructor");
+        if (constructor == null) {
+            return List.of();
+        }
+        return constructor.parameterNames();
+    }
+
+    @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
         Instance instance = new Instance(this);
         Function constructor = getMethod("constructor");

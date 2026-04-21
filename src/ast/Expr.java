@@ -45,7 +45,9 @@ public sealed interface Expr permits
         }
     }
 
-    record Call(Expr calleeExpression, Token leftParenthesis, List<Expr> arguments) implements Expr { }
+    record Argument(Token nameToken, Expr value) { }
+
+    record Call(Expr calleeExpression, Token leftParenthesis, List<Argument> arguments) implements Expr { }
 
     record GetMember(Expr objectExpression, Token memberIdentifier) implements Expr { }
 

@@ -93,7 +93,7 @@ public class Resolver {
     }
 
     private void resolveLetStatement(Stmt.Let stmt) {
-        declare(stmt.variableName()); // We do not define it right away so we can't use its own name in the initializer
+        declare(stmt.variableName()); // We do not define it right away so we can't use its own nameToken in the initializer
         if (stmt.initializer() != null) {
             resolve(stmt.initializer());
         }
@@ -218,7 +218,7 @@ public class Resolver {
 
     private void resolveLookupExpression(Expr.Lookup expr) {
         if (lookup(expr.identifierToken().lexeme()) == Boolean.FALSE) {
-            ErrorReporter.report("Variable name can not be used in its initializer.", expr.identifierToken().line());
+            ErrorReporter.report("Variable nameToken can not be used in its initializer.", expr.identifierToken().line());
         }
         resolveLocal(expr, expr.identifierToken());
     }
@@ -230,7 +230,9 @@ public class Resolver {
 
     private void resolveCallExpression(Expr.Call expr) {
         resolve(expr.calleeExpression());
-        expr.arguments().forEach(this::resolve);
+        for (Expr.Argument argument : expr.arguments()) {
+            resolve(argument.value());
+        }
     }
 
     private void resolveGetMemberExpression(Expr.GetMember expr) {

@@ -162,7 +162,7 @@ public class ExpressionParser {
     private Expr parseSuperExpression() {
         Token keyword = stream.previous();
         stream.consume(TokenType.DOT, "Expect '.' after 'super'.");
-        Token memberIdentifier = stream.consume(TokenType.IDENTIFIER, "Expect superclass member name.");
+        Token memberIdentifier = stream.consume(TokenType.IDENTIFIER, "Expect superclass member nameToken.");
         return new Expr.Super(keyword, memberIdentifier);
     }
 
@@ -194,7 +194,7 @@ public class ExpressionParser {
         List<Token> parameters = new ArrayList<>();
         if (!stream.check(TokenType.RIGHT_PARENTHESIS)) {
             do {
-                parameters.add(stream.consume(TokenType.IDENTIFIER, "Expect parameter name."));
+                parameters.add(stream.consume(TokenType.IDENTIFIER, "Expect parameter nameToken."));
             } while (stream.match(TokenType.COMMA));
         }
         stream.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after parameters.");
@@ -235,14 +235,14 @@ public class ExpressionParser {
     }
 
     private Expr parseDotExpression(Expr leftExpression) {
-        Token memberIdentifier = stream.consume(TokenType.IDENTIFIER, "Expect member name after '.'.");
+        Token memberIdentifier = stream.consume(TokenType.IDENTIFIER, "Expect member nameToken after '.'.");
         return new Expr.GetMember(leftExpression, memberIdentifier);
     }
 
     private Expr parseOmittedParenthesesCall(Expr leftExpression) {
         Token leftParenthesis = stream.previous();
-        List<Expr> arguments = new ArrayList<>();
-        arguments.add(parseTrailingLambdaBlock());
+        List<Expr.Argument> arguments = new ArrayList<>();
+        arguments.add(new Expr.Argument(null, parseTrailingLambdaBlock()));
         return new Expr.Call(leftExpression, leftParenthesis, arguments);
     }
 
@@ -255,15 +255,20 @@ public class ExpressionParser {
 
     private Expr parseCallExpression(Expr leftExpression) {
         Token leftParenthesis = stream.previous();
-        List<Expr> arguments = new ArrayList<>();
+        List<Expr.Argument> arguments = new ArrayList<>();
         if (!stream.check(TokenType.RIGHT_PARENTHESIS)) {
             do {
-                arguments.add(parseExpression());
+                Token name = null;
+                if (stream.check(TokenType.IDENTIFIER) && stream.peek(1).type() == TokenType.EQUAL) {
+                    name = stream.advance();
+                    stream.advance(); // Consume '='
+                }
+                arguments.add(new Expr.Argument(name, parseExpression()));
             } while (stream.match(TokenType.COMMA));
         }
         stream.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after arguments.");
         if (stream.match(TokenType.LEFT_BRACE)) {
-            arguments.add(parseTrailingLambdaBlock());
+            arguments.add(new Expr.Argument(null, parseTrailingLambdaBlock()));
         }
         return new Expr.Call(leftExpression, leftParenthesis, arguments);
     }
@@ -289,7 +294,7 @@ public class ExpressionParser {
         if (hasArrow) {
             if (!stream.check(TokenType.ARROW)) {
                 do {
-                    parameters.add(stream.consume(TokenType.IDENTIFIER, "Expect parameter name."));
+                    parameters.add(stream.consume(TokenType.IDENTIFIER, "Expect parameter nameToken."));
                 } while (stream.match(TokenType.COMMA));
             }
             stream.consume(TokenType.ARROW, "Expect '->' after lambda parameters.");

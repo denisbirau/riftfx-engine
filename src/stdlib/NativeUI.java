@@ -1,5 +1,7 @@
 package stdlib;
 
+import error.ErrorReporter;
+import error.RuntimeError;
 import interpreter.NativeObject;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -23,12 +25,17 @@ public class NativeUI {
         }
 
         @Override
+        public List<String> parameterNames() {
+            return List.of("title", "content");
+        }
+
+        @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
             if (!(arguments.get(0) instanceof String title)) {
                 throw new RuntimeException("Window title must be a string.");
             }
             if (!(arguments.get(1) instanceof Callable lambda)) {
-                throw new RuntimeException("Window requires a lambda function.");
+                throw new RuntimeException("Window requires a lambda content block.");
             }
             Platform.runLater(() -> {
                 Stage stage = new Stage();
@@ -37,6 +44,12 @@ public class NativeUI {
                 interpreter.uiContext.push(root);
                 try {
                     lambda.call(List.of(), interpreter);
+                } catch (RuntimeException e) {
+                    if (e instanceof RuntimeError runtimeError) {
+                        ErrorReporter.report("UI Layout Failed: " + runtimeError.getMessage(), runtimeError.getToken());
+                    } else {
+                        System.err.println("Fatal UI Error: " + e.getMessage());
+                    }
                 } finally {
                     interpreter.uiContext.pop();
                 }
@@ -51,22 +64,28 @@ public class NativeUI {
     public static class Text implements Callable {
         @Override
         public int arity() {
-            return 1;
+            return 3;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("content", "fontSize", "color");
         }
 
         @Override
         public boolean acceptsArity(int argCount) {
-            return argCount >= 1;
+            return argCount >= 1 && argCount <= arity();
         }
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
             if (arguments.isEmpty()) {
-                throw new RuntimeException("Text component requires at least one argument.");
+                throw new RuntimeException("Text requires content.");
             }
-            String content = (String) arguments.getFirst();
+            String content = arguments.getFirst().toString();
             Label label = new Label(content);
             StringBuilder css = new StringBuilder();
+
             if (arguments.size() > 1 && arguments.get(1) instanceof Double fontSize) {
                 css.append("-fx-font-size: ").append(fontSize).append("px; ");
             }
@@ -74,8 +93,9 @@ public class NativeUI {
                 css.append("-fx-text-fill: ").append(color).append("; ");
             }
             label.setStyle(css.toString());
+
             if (interpreter.uiContext.isEmpty()) {
-                throw new RuntimeException("Text component must be called inside an UI container.");
+                throw new RuntimeException("Text must be called inside an UI container.");
             }
             Pane parent = interpreter.uiContext.peek();
             parent.getChildren().add(label);
@@ -86,29 +106,39 @@ public class NativeUI {
     public static class Column implements Callable {
         @Override
         public int arity() {
-            return 1;
+            return 2;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("spacing", "content");
         }
 
         @Override
         public boolean acceptsArity(int argCount) {
-            return argCount >= 1;
+            return argCount >= 1 && argCount <= arity();
         }
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            if (arguments.isEmpty()) {
-                throw new RuntimeException("Column component must have at least one argument.");
+            double spacing = 0.5; // Default spacing
+            Callable lambda = null;
+
+            for (Object arg : arguments) {
+                if (arg instanceof Double d) {
+                    spacing = d;
+                } else if (arg instanceof Callable callable) {
+                    lambda = callable;
+                }
             }
-            Callable lambda;
+            if (lambda == null) {
+                throw new RuntimeException("Column requires a lambda content block.");
+            }
+
             VBox column = new VBox();
-            if (arguments.size() == 2 && arguments.getFirst() instanceof Double spacing) {
-                column.setSpacing(spacing);
-                column.setStyle("-fx-padding: " + spacing + "px;");
-                lambda = (Callable) arguments.get(1);
-            } else {
-                column.setSpacing(5);
-                lambda = (Callable) arguments.getFirst();
-            }
+            column.setSpacing(spacing);
+            column.setStyle("-fx-padding: " + spacing + "px;");
+
             if (interpreter.uiContext.isEmpty()) {
                 throw new RuntimeException("Column must be called inside an UI container.");
             }
@@ -126,29 +156,40 @@ public class NativeUI {
     public static class Row implements Callable {
         @Override
         public int arity() {
-            return 1;
+            return 2;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("spacing", "content");
         }
 
         @Override
         public boolean acceptsArity(int argCount) {
-            return argCount >= 1;
+            return argCount >= 1 && argCount <= arity();
         }
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            if (arguments.isEmpty()) {
-                throw new RuntimeException("Row component must have at least one argument.");
+            double spacing = 10.0; // Default spacing
+            Callable lambda = null;
+
+            for (Object arg : arguments) {
+                if (arg instanceof Double d) {
+                    spacing = d;
+                } else if (arg instanceof Callable callable) {
+                    lambda = callable;
+                }
             }
-            Callable lambda;
+
+            if (lambda == null) {
+                throw new RuntimeException("Row requires a lambda content block.");
+            }
+
             HBox row = new HBox();
-            if (arguments.size() == 2 && arguments.getFirst() instanceof Double spacing) {
-                row.setSpacing(spacing);
-                row.setStyle("-fx-padding: " + spacing + "px;");
-                lambda = (Callable) arguments.get(1);
-            } else {
-                row.setSpacing(10);
-                lambda = (Callable) arguments.getFirst();
-            }
+            row.setSpacing(spacing);
+            row.setStyle("-fx-padding: " + spacing + "px;");
+
             if (interpreter.uiContext.isEmpty()) {
                 throw new RuntimeException("Row must be called inside an UI container.");
             }
@@ -170,9 +211,18 @@ public class NativeUI {
         }
 
         @Override
+        public List<String> parameterNames() {
+            return List.of("text", "onClick");
+        }
+
+        @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            String text = (String) arguments.get(0);
-            Callable lambda = (Callable) arguments.get(1);
+            if (!(arguments.get(0) instanceof String text)) {
+                throw new RuntimeException("Button requires a text string.");
+            }
+            if (!(arguments.get(1) instanceof Callable lambda)) {
+                throw new RuntimeException("Button requires an onClick lambda.");
+            }
             javafx.scene.control.Button button = new javafx.scene.control.Button(text);
             button.setOnAction(_ -> {
                 try {
@@ -182,7 +232,7 @@ public class NativeUI {
                 }
             });
             if (interpreter.uiContext.isEmpty()) {
-                throw new RuntimeException("Button should be called inside an UI component.");
+                throw new RuntimeException("Button must be called inside an UI component.");
             }
             interpreter.uiContext.peek().getChildren().add(button);
             return null;
@@ -224,6 +274,11 @@ public class NativeUI {
                     }
 
                     @Override
+                    public List<String> parameterNames() {
+                        return List.of("value");
+                    }
+
+                    @Override
                     public Object call(List<Object> arguments, Interpreter interpreter) {
                         value = arguments.getFirst();
                         listeners.removeIf(listener -> !listener.update());
@@ -247,6 +302,11 @@ public class NativeUI {
         }
 
         @Override
+        public List<String> parameterNames() {
+            return List.of("initialValue");
+        }
+
+        @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
             return new State(arguments.getFirst());
         }
@@ -259,14 +319,25 @@ public class NativeUI {
         }
 
         @Override
+        public List<String> parameterNames() {
+            return List.of("state", "content");
+        }
+
+        @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            State state = (State) arguments.get(0);
-            Callable lambda = (Callable) arguments.get(1);
+            if (!(arguments.get(0) instanceof State state)) {
+                throw new RuntimeException("Observe requires a state object.");
+            }
+            if (!(arguments.get(1) instanceof Callable lambda)) {
+                throw new RuntimeException("Observe requires a lambda content block.");
+            }
+
             VBox container = new VBox();
             if (interpreter.uiContext.isEmpty()) {
                 throw new RuntimeException("Observe must be called inside an UI container.");
             }
             interpreter.uiContext.peek().getChildren().add(container);
+
             UIListener recompose = () -> {
                 // 1. THE LIFECYCLE CHECK
                 // If an outer Observe cleared the screen, this container was orphaned.
@@ -282,8 +353,11 @@ public class NativeUI {
                     try {
                         lambda.call(List.of(), interpreter);
                     } catch (RuntimeException e) {
-                        // Safe catch so a script error doesn't crash the JavaFX thread!
-                        System.err.println("Recomposition Error: " + e.getMessage());
+                        if (e instanceof RuntimeError runtimeError) {
+                            ErrorReporter.report("Recomposition Failed: " + runtimeError.getMessage(), runtimeError.getToken());
+                        } else {
+                            System.err.println("Fatal UI Error: " + e.getMessage());
+                        }
                     } finally {
                         interpreter.uiContext.pop();
                     }
@@ -304,18 +378,26 @@ public class NativeUI {
         }
 
         @Override
+        public List<String> parameterNames() {
+            return List.of("state");
+        }
+
+        @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
             if (!(arguments.getFirst() instanceof State state)) {
                 throw new RuntimeException("TextField requires state object.");
             }
+
             javafx.scene.control.TextField textField = new javafx.scene.control.TextField();
             textField.setText(state.value != null ? state.value.toString() : "");
+
             textField.textProperty().addListener((_, _, newValue) -> {
                 if (!newValue.equals(state.value)) {
                     state.value = newValue;
                     state.listeners.removeIf(listener -> !listener.update());
                 }
             });
+
             state.listeners.add(() -> {
                 // If this text field was removed from the screen, tell State to delete this listener!
                 if (textField.getParent() == null && textField.getScene() == null) {

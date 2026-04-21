@@ -97,12 +97,12 @@ public class Main {
 
     Window(title: "Thesis Demo", width: 800, height: 600) {
         VerticalLayout {
-            Text(value: "Hello, " + user.name, size: 24)
+            Text(value: "Hello, " + user.nameToken, size: 24)
 
             Button(
                 text: "Click Me",
                 onClick: () => {
-                    user.name = "Professor"; // Changing state updates the UI automatically
+                    user.nameToken = "Professor"; // Changing state updates the UI automatically
                 }
             )
         }

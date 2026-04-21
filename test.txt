@@ -47,28 +47,28 @@ let textState = State("Type something...");
 
 // Build the declarative UI tree
 Window("My Custom Language UI") {
-    Column(15.0) {
-        Text("Welcome to my UI Framework!", 24.0, "blue");
+    Column(spacing = 15.0) {
+        Text(content="Welcome to my UI Framework!", fontSize=24.0, color="blue");
 
-        Row(10.0) {
-            Button("Decrement") {
+        Row(spacing=10.0) {
+            Button(text="Decrement") {
                 counterState.set(counterState.get() - 1);
             };
 
-            Observe(counterState) {
-                Text("Count: " + counterState.get(), 18.0, "black");
+            Observe(state=counterState) {
+                Text(content="Count: " + counterState.get(), fontSize=18.0, color="black");
             };
 
-            Button("Increment") {
+            Button(text="Increment") {
                 counterState.set(counterState.get() + 1);
             };
         };
 
-        Text("Reactivity Test:", 18.0, "gray");
-        TextField(textState);
+        Text(content="Reactivity Test:", fontSize=18.0, color="gray");
+        TextField(state=textState);
 
-        Observe(textState) {
-            Text("You typed: " + textState.get(), 14.0, "green");
+        Observe(state=textState) {
+            Text(content="You typed: " + textState.get(), fontSize=14.0, color="green");
         };
     };
 };

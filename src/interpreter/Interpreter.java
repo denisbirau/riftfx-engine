@@ -281,16 +281,67 @@ public class Interpreter {
 
     private Object evaluateCallExpression(Expr.Call expr) {
         var callee = evaluate(expr.calleeExpression());
-        var arguments = new ArrayList<>();
-        for (Expr arg : expr.arguments()) {
-            arguments.add(evaluate(arg));
-        }
         if (!(callee instanceof Callable callable)) {
             throw new RuntimeError("Only functions or classes can be called.", expr.leftParenthesis());
         }
-        if (!callable.acceptsArity(arguments.size())) {
-            throw new RuntimeError("Expected " + callable.arity() + " arguments but got " + arguments.size() + ".", expr.leftParenthesis());
+
+        if (!callable.acceptsArity(expr.arguments().size())) {
+            throw new RuntimeError("Invalid number of arguments. Expected " + callable.arity() + " but got " + expr.arguments().size() + ".", expr.leftParenthesis());
         }
+
+        List<Object> arguments = new ArrayList<>();
+        boolean[] isFilled = new boolean[callable.arity()]; // Tracks filled parameter slots
+        for (int i = 0; i < callable.arity(); i++) {
+            arguments.add(null);
+        }
+
+        int positionalIndex = 0;
+        List<String> paramNames = callable.parameterNames();
+        boolean namedArgumentSeen = false;
+
+        for (int i = 0; i < expr.arguments().size(); i++) {
+            Expr.Argument arg = expr.arguments().get(i);
+            Object value = evaluate(arg.value());
+
+            int targetIndex;
+
+            if (arg.nameToken() != null) {
+                // 1. Named Argument
+                namedArgumentSeen = true;
+                targetIndex = paramNames.indexOf(arg.nameToken().lexeme());
+                if (targetIndex == -1) {
+                    throw new RuntimeError("No parameter named '" + arg.nameToken().lexeme() + "' found.", arg.nameToken());
+                }
+            } else {
+                // 2. Positional Argument / Trailing Lambda
+                boolean isTrailingLambda = (i == expr.arguments().size() - 1) && (arg.value() instanceof Expr.Lambda);
+
+                if (isTrailingLambda && namedArgumentSeen) {
+                    // Trailing lambdas always bind to the LAST parameter
+                    targetIndex = callable.arity() - 1;
+                } else {
+                    if (namedArgumentSeen) {
+                        throw new RuntimeError("Positional arguments can not appear after named arguments.", expr.leftParenthesis());
+                    }
+                    if (positionalIndex >= callable.arity()) {
+                        throw new RuntimeError("Too many positional arguments provided.", expr.leftParenthesis());
+                    }
+                    targetIndex = positionalIndex;
+                    positionalIndex++;
+                }
+            }
+
+            // --- THE COLLISION DETECTOR ---
+            if (isFilled[targetIndex]) {
+                Token errToken = arg.nameToken() != null ? arg.nameToken() : expr.leftParenthesis();
+                String collisionName = paramNames.size() > targetIndex ? paramNames.get(targetIndex) : "index " + targetIndex;
+                throw new RuntimeError("Multiple values passed for parameter '" + collisionName + "'.", errToken);
+            }
+
+            arguments.set(targetIndex, value);
+            isFilled[targetIndex] = true;
+        }
+
         try {
             return callable.call(arguments, this);
         } catch (RuntimeException error) {

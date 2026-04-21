@@ -16,7 +16,6 @@ public sealed interface Stmt permits
         Stmt.Return,
         Stmt.Class
 {
-
     record Expression(Expr expression) implements Stmt { }
 
     record Let(Token variableName, Expr initializer) implements Stmt { }

@@ -49,7 +49,7 @@ public class Parser {
     }
 
     private Stmt parseLetStatement() {
-        Token identifier = stream.consume(TokenType.IDENTIFIER, "Expect variable name after 'let' keyword.");
+        Token identifier = stream.consume(TokenType.IDENTIFIER, "Expect variable nameToken after 'let' keyword.");
         Expr initializer = null;
         if (stream.match(TokenType.EQUAL)) {
             initializer = expressionParser.parseExpression();
@@ -59,13 +59,13 @@ public class Parser {
     }
 
     private Stmt.Def parseDefStatement(String type) {
-        Token functionName = stream.consume(TokenType.IDENTIFIER, "Expect " + type + " name after 'def' keyword.");
-        stream.consume(TokenType.LEFT_PARENTHESIS, "Expect '(' after "+ type +" name.");
+        Token functionName = stream.consume(TokenType.IDENTIFIER, "Expect " + type + " nameToken after 'def' keyword.");
+        stream.consume(TokenType.LEFT_PARENTHESIS, "Expect '(' after "+ type +" nameToken.");
 
         List<Token> parameters = new ArrayList<>();
         if (!stream.check(TokenType.RIGHT_PARENTHESIS)) {
             do {
-                parameters.add(stream.consume(TokenType.IDENTIFIER, "Expect parameter name."));
+                parameters.add(stream.consume(TokenType.IDENTIFIER, "Expect parameter nameToken."));
             } while (stream.match(TokenType.COMMA));
         }
         stream.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after " + type + " parameters.");
@@ -76,11 +76,11 @@ public class Parser {
     }
 
     private Stmt parseClassStatement() {
-        Token className = stream.consume(TokenType.IDENTIFIER, "Expect class name after 'class' keyword.");
+        Token className = stream.consume(TokenType.IDENTIFIER, "Expect class nameToken after 'class' keyword.");
 
         Expr.Lookup superclassLookupExpression = null;
         if (stream.match(TokenType.EXTENDS)) {
-            stream.consume(TokenType.IDENTIFIER, "Expect superclass name after 'extends' keyword.");
+            stream.consume(TokenType.IDENTIFIER, "Expect superclass nameToken after 'extends' keyword.");
             superclassLookupExpression = new Expr.Lookup(stream.previous());
         }
 
