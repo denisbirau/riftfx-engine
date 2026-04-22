@@ -6,6 +6,7 @@ import javafx.util.Pair;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 
 public class Scanner {
     private final String sourceCode;
@@ -17,6 +18,10 @@ public class Scanner {
 
     private final List<Token> tokens = new ArrayList<>();
 
+    // String interpolation tracking
+    private int braceDepth = 0;
+    private final Stack<Integer> interpolationDepths = new Stack<>();
+
     private static final Map<Character, TokenType> SINGLE_CHARACTERS = Map.ofEntries(
             Map.entry('+', TokenType.PLUS),
             Map.entry('*', TokenType.STAR),
@@ -27,8 +32,6 @@ public class Scanner {
             Map.entry(',', TokenType.COMMA),
             Map.entry('?', TokenType.QUESTION_MARK),
             Map.entry(':', TokenType.COLON),
-            Map.entry('{', TokenType.LEFT_BRACE),
-            Map.entry('}', TokenType.RIGHT_BRACE),
             Map.entry('.', TokenType.DOT),
             Map.entry('[', TokenType.LEFT_BRACKET),
             Map.entry(']', TokenType.RIGHT_BRACKET)
@@ -86,6 +89,23 @@ public class Scanner {
             scanSlash();
         } else if (getCurrentCharacter() == '"') {
             scanString();
+        } else if (getCurrentCharacter() == '{') {
+            braceDepth++;
+            scanSingleCharacter(TokenType.LEFT_BRACE);
+        } else if (getCurrentCharacter() == '}') {
+            if (!interpolationDepths.isEmpty() && braceDepth == interpolationDepths.peek()) {
+                interpolationDepths.pop();
+                tokens.add(new Token(TokenType.RIGHT_PARENTHESIS, ")", line));
+                tokens.add(new Token(TokenType.PLUS, "+", line));
+                advanceCurrentCharacter(1); // consume }
+                startIndex = currentIndex;
+                scanStringBody(); // Resume string scanning
+            } else {
+                if (braceDepth > 0) {
+                    braceDepth--;
+                }
+                scanSingleCharacter(TokenType.RIGHT_BRACE);
+            }
         } else if (SINGLE_CHARACTERS.containsKey(getCurrentCharacter())) {
             scanSingleCharacter(SINGLE_CHARACTERS.get(getCurrentCharacter()));
         } else if (SINGLE_OR_DOUBLE_CHARACTERS.containsKey(getCurrentCharacter())) {
@@ -98,6 +118,7 @@ public class Scanner {
             scanIdentifier();
         } else {
             ErrorReporter.report("Unexpected character: " + getCurrentCharacter(), line);
+            advanceCurrentCharacter(1);
         }
     }
 
@@ -147,9 +168,22 @@ public class Scanner {
 
     private void scanString() {
         advanceCurrentCharacter(1);
+        startIndex = currentIndex;
+        scanStringBody();
+    }
+
+    private void scanStringBody() {
         while (getCurrentCharacter() != '"') {
             if (isAtEnd() || getCurrentCharacter() == '\n') {
                 ErrorReporter.report("Unterminated string.", line);
+                return;
+            } else if (getCurrentCharacter() == '$' && nextCharacter() == '{') {
+                var value = sourceCode.substring(startIndex, currentIndex);
+                tokens.add(new Token(TokenType.STRING, "\"" + value + "\"", line));
+                tokens.add(new Token(TokenType.PLUS, "+", line));
+                tokens.add(new Token(TokenType.LEFT_PARENTHESIS, "(", line));
+                advanceCurrentCharacter(2); // Consume ${
+                interpolationDepths.push(braceDepth);
                 return;
             } else if (isEscapeSequence()) {
                 advanceCurrentCharacter(2);
@@ -157,8 +191,9 @@ public class Scanner {
                 advanceCurrentCharacter(1);
             }
         }
+        var value = sourceCode.substring(startIndex, currentIndex);
+        tokens.add(new Token(TokenType.STRING, "\"" + value + "\"", line));
         advanceCurrentCharacter(1); // To consume last "
-        addToken(TokenType.STRING);
     }
 
     private void scanNumber() {
@@ -228,7 +263,7 @@ public class Scanner {
     }
 
     private void addToken(TokenType type) {
-        String lexeme = sourceCode.substring(startIndex, currentIndex);
+        var lexeme = sourceCode.substring(startIndex, currentIndex);
         tokens.add(new Token(type, lexeme, line));
     }
 }

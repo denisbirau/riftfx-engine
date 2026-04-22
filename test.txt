@@ -56,7 +56,7 @@ Window("My Custom Language UI") {
             };
 
             Observe(state=counterState) {
-                Text(content="Count: " + counterState.get(), fontSize=18.0, color="black");
+                Text(content="Count: ${counterState.get()}", fontSize=18.0, color="black");
             };
 
             Button(text="Increment") {
@@ -68,7 +68,7 @@ Window("My Custom Language UI") {
         TextField(state=textState);
 
         Observe(state=textState) {
-            Text(content="You typed: " + textState.get(), fontSize=14.0, color="green");
+            Text(content="You typed: ${textState.get()}", fontSize=14.0, color="green");
         };
     };
 };
