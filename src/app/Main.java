@@ -33,21 +33,23 @@ public class Main {
 
             Platform.startup(() -> {});
 
-            Scanner scanner = new Scanner(sourceCode);
+            ErrorReporter errorReporter = new ErrorReporter();
+
+            Scanner scanner = new Scanner(sourceCode, errorReporter);
             List<Token> tokens = scanner.scan();
-            if (ErrorReporter.hadError()) exit(65);
+            if (errorReporter.hadError()) exit(65);
 
-            Parser parser = new Parser(tokens);
+            Parser parser = new Parser(tokens, errorReporter);
             List<Stmt> statements = parser.parse();
-            if (ErrorReporter.hadError()) exit(65);
+            if (errorReporter.hadError()) exit(65);
 
-            Resolver resolver = new Resolver();
+            Resolver resolver = new Resolver(errorReporter);
             resolver.resolve(statements);
-            if (ErrorReporter.hadError()) exit(65);
+            if (errorReporter.hadError()) exit(65);
 
-            Interpreter interpreter = new Interpreter(statements);
+            Interpreter interpreter = new Interpreter(statements, errorReporter);
             interpreter.interpret();
-            if (ErrorReporter.hadError()) exit(70);
+            if (errorReporter.hadError()) exit(70);
 
             Platform.runLater(() -> {
                 if (javafx.stage.Window.getWindows().isEmpty()) {

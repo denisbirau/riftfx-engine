@@ -1,12 +1,12 @@
 package stdlib;
 
-import error.ErrorReporter;
 import error.RuntimeError;
 import interpreter.NativeObject;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import interpreter.Callable;
@@ -76,7 +76,7 @@ public class NativeUI {
                     finalLambda.call(List.of(), interpreter);
                 } catch (RuntimeException e) {
                     if (e instanceof RuntimeError runtimeError) {
-                        ErrorReporter.report("UI Layout Failed: " + runtimeError.getMessage(), runtimeError.getToken());
+                        interpreter.errorReporter.report("UI Layout Failed: " + runtimeError.getMessage(), runtimeError.getToken());
                     } else {
                         System.err.println("Fatal UI Error: " + e.getMessage());
                     }
@@ -140,7 +140,7 @@ public class NativeUI {
         }
     }
 
-    public static class Column implements Callable {
+    public abstract static class AbstractUIContainer<T extends Pane> implements Callable {
         @Override
         public int arity() {
             return 2;
@@ -156,6 +156,10 @@ public class NativeUI {
             return argCount >= 1 && argCount <= arity();
         }
 
+        protected abstract T createContainer();
+        protected abstract void applySpacing(T container, double spacing);
+        protected abstract double getDefaultSpacing();
+
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
             ModifierInstance modifierInstance = null;
@@ -168,94 +172,71 @@ public class NativeUI {
                     lambda = c;
                 }
             }
+
             if (lambda == null) {
-                throw new RuntimeException("Column requires content.");
+                throw new RuntimeException(getClass().getSimpleName() + " requires a content block.");
             }
 
-            VBox column = new VBox();
-            column.setSpacing(5);
+            T container = createContainer();
+            applySpacing(container, getDefaultSpacing());
             if (modifierInstance != null) {
-                column.setStyle(modifierInstance.buildCss());
+                container.setStyle(modifierInstance.buildCss());
                 if (modifierInstance.cssProperties.containsKey("-fx-padding")) {
-                    var padding = modifierInstance.cssProperties.get("-fx-padding").replace("px", "");
+                    String padding = modifierInstance.cssProperties.get("-fx-padding").replace("px", "");
                     try {
-                        column.setSpacing(Double.parseDouble(padding));
-                    } catch (Exception _) {
-                    }
+                        applySpacing(container, Double.parseDouble(padding));
+                    } catch (NumberFormatException _) {}
                 }
             }
 
             if (interpreter.uiContext.isEmpty()) {
-                throw new RuntimeException("Column must be called inside an UI container.");
+                throw new RuntimeException(getClass().getSimpleName() + " must be called inside an UI container.");
             }
-            interpreter.uiContext.peek().getChildren().add(column);
-            interpreter.uiContext.push(column);
+
+            interpreter.uiContext.peek().getChildren().add(container);
+            interpreter.uiContext.push(container);
+
             try {
                 lambda.call(List.of(), interpreter);
             } finally {
                 interpreter.uiContext.pop();
             }
+
             return null;
         }
     }
 
-    public static class Row implements Callable {
+    public static class Column extends AbstractUIContainer<VBox> {
         @Override
-        public int arity() {
-            return 2;
+        protected VBox createContainer() {
+            return new VBox();
         }
 
         @Override
-        public List<String> parameterNames() {
-            return List.of("modifier", "content");
+        protected void applySpacing(VBox container, double spacing) {
+            container.setSpacing(spacing);
         }
 
         @Override
-        public boolean acceptsArity(int argCount) {
-            return argCount >= 1 && argCount <= arity();
+        protected double getDefaultSpacing() {
+            return 5.0;
+        }
+    }
+
+    public static class Row extends AbstractUIContainer<HBox> {
+        @Override
+        protected HBox createContainer() {
+            return new HBox();
         }
 
         @Override
-        public Object call(List<Object> arguments, Interpreter interpreter) {
-            ModifierInstance modifierInstance = null;
-            Callable lambda = null;
+        protected void applySpacing(HBox container, double spacing) {
+            container.setSpacing(spacing);
+        }
 
-            for (Object arg : arguments) {
-                if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                } else if (arg instanceof Callable c) {
-                    lambda = c;
-                }
-            }
-
-            if (lambda == null) {
-                throw new RuntimeException("Row requires content.");
-            }
-
-            HBox row = new HBox();
-            row.setSpacing(10);
-            if (modifierInstance != null) {
-                row.setStyle(modifierInstance.buildCss());
-                if (modifierInstance.cssProperties.containsKey("-fx-padding")) {
-                    var padding = modifierInstance.cssProperties.get("-fx-padding").replace("px", "");
-                    try {
-                        row.setSpacing(Double.parseDouble(padding));
-                    } catch (Exception _) {
-                    }
-                }
-            }
-
-            if (interpreter.uiContext.isEmpty()) {
-                throw new RuntimeException("Row must be called inside an UI container.");
-            }
-            interpreter.uiContext.peek().getChildren().add(row);
-            interpreter.uiContext.push(row);
-            try {
-                lambda.call(List.of(), interpreter);
-            } finally {
-                interpreter.uiContext.pop();
-            }
-            return null;
+        @Override
+        protected double getDefaultSpacing() {
+            return 10.0;
         }
     }
 
@@ -435,7 +416,7 @@ public class NativeUI {
                         lambda.call(List.of(), interpreter);
                     } catch (RuntimeException e) {
                         if (e instanceof RuntimeError runtimeError) {
-                            ErrorReporter.report("Recomposition Failed: " + runtimeError.getMessage(), runtimeError.getToken());
+                            interpreter.errorReporter.report("Recomposition Failed: " + runtimeError.getMessage(), runtimeError.getToken());
                         } else {
                             System.err.println("Fatal UI Error: " + e.getMessage());
                         }

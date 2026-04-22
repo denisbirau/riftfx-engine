@@ -4,6 +4,7 @@ import ast.Expr;
 import ast.Stmt;
 import error.ErrorReporter;
 import scanner.Token;
+import stdlib.StandardLibrary;
 
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Stack;
 
 public class Resolver {
     private final Stack<Map<String, Boolean>> scopes = new Stack<>();
+    private final ErrorReporter errorReporter;
 
     private boolean insideLoop = false;
     private boolean insideFunction = false;
@@ -19,20 +21,18 @@ public class Resolver {
     private boolean insideClass = false;
     private boolean hasSuperclass = false;
 
-    public void resolve(List<Stmt> statements) {
+    public Resolver(ErrorReporter errorReporter) {
+        this.errorReporter = errorReporter;
         beginNewScope();
-        scopes.peek().put("Math", true);
-        scopes.peek().put("Window", true);
-        scopes.peek().put("Text", true);
-        scopes.peek().put("Column", true);
-        scopes.peek().put("Row", true);
-        scopes.peek().put("Button", true);
-        scopes.peek().put("State", true);
-        scopes.peek().put("Observe", true);
-        scopes.peek().put("TextField", true);
-        scopes.peek().put("Modifier", true);
+        StandardLibrary.GLOBALS.keySet().forEach(this::defineNative);
+    }
+
+    private void defineNative(String name) {
+        scopes.peek().put(name, true);
+    }
+
+    public void resolve(List<Stmt> statements) {
         statements.forEach(this::resolve);
-        endNewScope();
     }
 
     private void resolve(Stmt stmt) {
@@ -85,7 +85,7 @@ public class Resolver {
                 return;
             }
         }
-        ErrorReporter.report("'" + identifier.lexeme() + "' was not declared.", identifier.line());
+        errorReporter.report("'" + identifier.lexeme() + "' was not declared.", identifier.line());
     }
 
     // Statement Handlers
@@ -129,7 +129,7 @@ public class Resolver {
 
     private void resolveBreakStatement(Stmt.Break stmt) {
         if (!insideLoop) {
-            ErrorReporter.report("Break statement outside loop.", stmt.keyword().line());
+            errorReporter.report("Break statement outside loop.", stmt.keyword().line());
         }
     }
 
@@ -151,10 +151,10 @@ public class Resolver {
 
     private void resolveReturnStatement(Stmt.Return stmt) {
         if (!insideFunction) {
-            ErrorReporter.report("Return statement outside function.", stmt.keyword().line());
+            errorReporter.report("Return statement outside function.", stmt.keyword().line());
         }
         else if (stmt.expression() != null && isConstructor) {
-            ErrorReporter.report("Constructors can not return values.", stmt.keyword().line());
+            errorReporter.report("Constructors can not return values.", stmt.keyword().line());
         }
         else if (stmt.expression() != null) {
             resolve(stmt.expression());
@@ -169,7 +169,7 @@ public class Resolver {
         if (stmt.superclassLookupExpression() != null) {
             hasSuperclass = true;
             if (stmt.superclassLookupExpression().identifierToken().lexeme().equals(stmt.className().lexeme())) {
-                ErrorReporter.report(
+                errorReporter.report(
                         "A class can not inherit from itself.",
                         stmt.superclassLookupExpression().identifierToken().line()
                 );
@@ -219,7 +219,7 @@ public class Resolver {
 
     private void resolveLookupExpression(Expr.Lookup expr) {
         if (lookup(expr.identifierToken().lexeme()) == Boolean.FALSE) {
-            ErrorReporter.report("Variable nameToken can not be used in its initializer.", expr.identifierToken().line());
+            errorReporter.report("Variable nameToken can not be used in its initializer.", expr.identifierToken().line());
         }
         resolveLocal(expr, expr.identifierToken());
     }
@@ -247,7 +247,7 @@ public class Resolver {
 
     private void resolveThisExpression(Expr.This expr) {
         if (!insideClass) {
-            ErrorReporter.report("'this' keyword outside class.", expr.keyword().line());
+            errorReporter.report("'this' keyword outside class.", expr.keyword().line());
         } else {
             resolveLocal(expr, expr.keyword());
         }
@@ -255,9 +255,9 @@ public class Resolver {
 
     private void resolveSuperExpression(Expr.Super expr) {
         if (!insideClass) {
-            ErrorReporter.report("'super' outside a class.", expr.keyword().line());
+            errorReporter.report("'super' outside a class.", expr.keyword().line());
         } else if (!hasSuperclass) {
-            ErrorReporter.report("No superclass defined for 'super'.", expr.keyword().line());
+            errorReporter.report("No superclass defined for 'super'.", expr.keyword().line());
         } else {
             resolveLocal(expr, expr.keyword());
         }
@@ -304,7 +304,7 @@ public class Resolver {
 
     private void declare(Token name) {
         if (scopes.peek().containsKey(name.lexeme())) {
-            ErrorReporter.report("'" + name.lexeme() + "' was already declared in this scope.", name.line());
+            errorReporter.report("'" + name.lexeme() + "' was already declared in this scope.", name.line());
         }
         scopes.peek().put(name.lexeme(), false);
     }

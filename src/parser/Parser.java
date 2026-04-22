@@ -15,10 +15,12 @@ import java.util.Objects;
 public class Parser {
     private final TokenStream stream;
     private final ExpressionParser expressionParser;
+    private final ErrorReporter errorReporter;
 
-    public Parser(List<Token> tokens) {
-        stream = new TokenStream(tokens);
-        expressionParser = new ExpressionParser(this.stream, this);
+    public Parser(List<Token> tokens, ErrorReporter errorReporter) {
+        this.stream = new TokenStream(tokens);
+        this.expressionParser = new ExpressionParser(this.stream, this);
+        this.errorReporter = errorReporter;
     }
 
     // Parse Statements
@@ -28,7 +30,7 @@ public class Parser {
             try {
                 statements.add(parseDeclaration());
             } catch (ParseError error) {
-                ErrorReporter.report(error.getMessage(), error.getToken());
+                errorReporter.report(error.getMessage(), error.getToken());
                 skipToNextStatement();
             }
         }

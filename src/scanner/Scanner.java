@@ -10,6 +10,7 @@ import java.util.Stack;
 
 public class Scanner {
     private final String sourceCode;
+    private final ErrorReporter errorReporter;
 
     // Internal logic indexes
     private int startIndex = 0;
@@ -66,8 +67,9 @@ public class Scanner {
             Map.entry("super", TokenType.SUPER)
     );
 
-    public Scanner(String sourceCode) {
+    public Scanner(String sourceCode, ErrorReporter errorReporter) {
         this.sourceCode = sourceCode;
+        this.errorReporter = errorReporter;
     }
 
     public List<Token> scan() {
@@ -117,7 +119,7 @@ public class Scanner {
         } else if (isAlpha(getCurrentCharacter())) {
             scanIdentifier();
         } else {
-            ErrorReporter.report("Unexpected character: " + getCurrentCharacter(), line);
+            errorReporter.report("Unexpected character: " + getCurrentCharacter(), line);
             advanceCurrentCharacter(1);
         }
     }
@@ -147,7 +149,7 @@ public class Scanner {
         advanceCurrentCharacter(2);
         while (!(getCurrentCharacter() == '*' && nextCharacter() == '/')) {
             if (isAtEnd()) {
-                ErrorReporter.report("Unterminated comment.", line);
+                errorReporter.report("Unterminated comment.", line);
                 return;
             } else if (getCurrentCharacter() == '\n') {
                 line++;
@@ -175,7 +177,7 @@ public class Scanner {
     private void scanStringBody() {
         while (getCurrentCharacter() != '"') {
             if (isAtEnd() || getCurrentCharacter() == '\n') {
-                ErrorReporter.report("Unterminated string.", line);
+                errorReporter.report("Unterminated string.", line);
                 return;
             } else if (getCurrentCharacter() == '$' && nextCharacter() == '{') {
                 var value = sourceCode.substring(startIndex, currentIndex);

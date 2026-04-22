@@ -8,8 +8,7 @@ import scanner.TokenType;
 import error.RuntimeError;
 import javafx.scene.layout.Pane;
 import stdlib.NativeArray;
-import stdlib.NativeMath;
-import stdlib.NativeUI;
+import stdlib.StandardLibrary;
 
 import java.util.*;
 
@@ -18,23 +17,13 @@ public class Interpreter {
     Environment currentEnvironment = globalEnvironment;
 
     private final List<Stmt> statements;
-
+    public final ErrorReporter errorReporter;
     public final Stack<Pane> uiContext = new Stack<>();
 
-    public Interpreter(List<Stmt> statements) {
+    public Interpreter(List<Stmt> statements, ErrorReporter errorReporter) {
         this.statements = statements;
-
-        // Native functions
-        globalEnvironment.define("Math", new NativeMath());
-        globalEnvironment.define("Window", new NativeUI.Window());
-        globalEnvironment.define("Text", new NativeUI.Text());
-        globalEnvironment.define("Column", new NativeUI.Column());
-        globalEnvironment.define("Row", new NativeUI.Row());
-        globalEnvironment.define("Button", new NativeUI.Button());
-        globalEnvironment.define("State", new NativeUI.CreateState());
-        globalEnvironment.define("Observe", new NativeUI.Observe());
-        globalEnvironment.define("TextField", new NativeUI.TextField());
-        globalEnvironment.define("Modifier", new NativeUI.ModifierBase());
+        this.errorReporter = errorReporter;
+        StandardLibrary.GLOBALS.forEach(globalEnvironment::define);
     }
 
     public void interpret() {
@@ -42,7 +31,7 @@ public class Interpreter {
             try {
                 execute(statement);
             } catch (RuntimeError error) {
-                ErrorReporter.report(error.getMessage(), error.getToken());
+                errorReporter.report(error.getMessage(), error.getToken());
                 return;
             }
         }
@@ -218,13 +207,12 @@ public class Interpreter {
             }
             case TokenType.PLUS -> {
                 var rightValue = evaluate(expr.rightExpression());
-                if (leftValue instanceof Double l && rightValue instanceof Double r) {
-                    yield l + r;
-                }
-                if (leftValue instanceof String || rightValue instanceof String) {
-                    yield stringify(leftValue) + stringify(rightValue);
-                }
-                throw new RuntimeError("Operands must be numbers or strings.", expr.operator());
+                yield switch (leftValue) {
+                    case Double l when rightValue instanceof Double r -> l + r;
+                    case String s -> s + stringify(rightValue);
+                    case Object l when rightValue instanceof String r -> stringify(l) + r;
+                    default -> throw new RuntimeError("Operands must be numbers or strings.", expr.operator());
+                };
             }
             case TokenType.MINUS -> {
                 var rightValue = evaluate(expr.rightExpression());
@@ -246,8 +234,8 @@ public class Interpreter {
                 var rightValue = evaluate(expr.rightExpression());
                 yield asDouble(leftValue, expr.operator()) >= asDouble(rightValue, expr.operator());
             }
-            case TokenType.EQUAL_EQUAL -> areEqual(leftValue, evaluate(expr.rightExpression()));
-            case TokenType.NOT_EQUAL -> !areEqual(leftValue, evaluate(expr.rightExpression()));
+            case TokenType.EQUAL_EQUAL -> Objects.equals(leftValue, evaluate(expr.rightExpression()));
+            case TokenType.NOT_EQUAL -> !Objects.equals(leftValue, evaluate(expr.rightExpression()));
             case TokenType.AND -> !isTrue(leftValue) ? leftValue : evaluate(expr.rightExpression());
             case TokenType.OR -> isTrue(leftValue) ? leftValue : evaluate(expr.rightExpression());
             default -> null; // Unreachable
@@ -507,15 +495,5 @@ public class Interpreter {
             case String s -> !s.isEmpty();
             default -> true;
         };
-    }
-
-    private boolean areEqual(Object leftValue, Object rightValue) {
-        if (leftValue == null && rightValue == null) {
-            return true;
-        }
-        if (leftValue == null) {
-            return false;
-        }
-        return leftValue.equals(rightValue);
     }
 }

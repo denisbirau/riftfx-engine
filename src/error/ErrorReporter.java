@@ -4,13 +4,13 @@ import scanner.Token;
 import scanner.TokenType;
 
 public class ErrorReporter {
-    private static boolean hadError = false;
+    private boolean hadError = false;
 
-    public static void report(String message, int line) {
+    public void report(String message, int line) {
         report(line, "", message);
     }
 
-    public static void report(String message, Token token) {
+    public void report(String message, Token token) {
         if (token.type() == TokenType.EOF) {
             report(token.line(), " at end", message);
         } else {
@@ -18,12 +18,12 @@ public class ErrorReporter {
         }
     }
 
-    public static void report(int line, String where, String message) {
+    public void report(int line, String where, String message) {
         System.err.println("Error[line " + line + "]" + where + ": " + message);
         hadError = true;
     }
 
-    public static boolean hadError() {
+    public boolean hadError() {
         return hadError;
     }
 }
