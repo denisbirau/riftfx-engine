@@ -7,7 +7,6 @@ import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import interpreter.Callable;
@@ -15,35 +14,66 @@ import interpreter.Interpreter;
 import scanner.Token;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class NativeUI {
     public static class Window implements Callable {
         @Override
         public int arity() {
-            return 2;
+            return 3;
         }
 
         @Override
         public List<String> parameterNames() {
-            return List.of("title", "content");
+            return List.of("title", "modifier", "content");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 2 && argCount <= arity();
         }
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            if (!(arguments.get(0) instanceof String title)) {
-                throw new RuntimeException("Window title must be a string.");
+            String title = null;
+            ModifierInstance modifierInstance = null;
+            Callable lambda = null;
+
+            for (Object arg : arguments) {
+                if (arg instanceof String s) {
+                    title = s;
+                } else if (arg instanceof ModifierInstance m) {
+                    modifierInstance = m;
+                } else if (arg instanceof Callable c) {
+                    lambda = c;
+                }
             }
-            if (!(arguments.get(1) instanceof Callable lambda)) {
-                throw new RuntimeException("Window requires a lambda content block.");
+
+            if (title == null) {
+                throw new RuntimeException("Window requires a title.");
             }
+            if (lambda == null) {
+                throw new RuntimeException("Window requires content.");
+            }
+
+            final String finalTitle = title;
+            final ModifierInstance finalModifierInstance = modifierInstance;
+            final Callable finalLambda = lambda;
+
             Platform.runLater(() -> {
                 Stage stage = new Stage();
-                stage.setTitle(title);
+                stage.setTitle(finalTitle);
                 VBox root = new VBox();
+
+                if (finalModifierInstance != null) {
+                    root.setStyle(finalModifierInstance.buildCss());
+                }
+
                 interpreter.uiContext.push(root);
                 try {
-                    lambda.call(List.of(), interpreter);
+                    finalLambda.call(List.of(), interpreter);
                 } catch (RuntimeException e) {
                     if (e instanceof RuntimeError runtimeError) {
                         ErrorReporter.report("UI Layout Failed: " + runtimeError.getMessage(), runtimeError.getToken());
@@ -64,12 +94,12 @@ public class NativeUI {
     public static class Text implements Callable {
         @Override
         public int arity() {
-            return 3;
+            return 2;
         }
 
         @Override
         public List<String> parameterNames() {
-            return List.of("content", "fontSize", "color");
+            return List.of("content", "modifier");
         }
 
         @Override
@@ -79,27 +109,34 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            if (arguments.isEmpty()) {
-                throw new RuntimeException("Text requires content.");
-            }
-            String content = arguments.getFirst().toString();
-            Label label = new Label(content);
-            StringBuilder css = new StringBuilder();
+            String content = "";
+            ModifierInstance modifierInstance = null;
 
-            if (arguments.size() > 1 && arguments.get(1) instanceof Double fontSize) {
-                css.append("-fx-font-size: ").append(fontSize).append("px; ");
+            for (Object arg : arguments) {
+                if (arg instanceof String s) {
+                    content = s;
+                } else if (arg instanceof Double d) {
+                    content = stringify(d);
+                } else if (arg instanceof ModifierInstance m) {
+                    modifierInstance = m;
+                }
             }
-            if (arguments.size() > 2 && arguments.get(2) instanceof String color) {
-                css.append("-fx-text-fill: ").append(color).append("; ");
+
+            Label label = new Label(content);
+            if (modifierInstance != null) {
+                label.setStyle(modifierInstance.buildCss());
             }
-            label.setStyle(css.toString());
 
             if (interpreter.uiContext.isEmpty()) {
                 throw new RuntimeException("Text must be called inside an UI container.");
             }
-            Pane parent = interpreter.uiContext.peek();
-            parent.getChildren().add(label);
+            interpreter.uiContext.peek().getChildren().add(label);
             return null;
+        }
+
+        private String stringify(Double d) {
+            String str = d.toString();
+            return str.endsWith(".0") ? str.substring(0, str.length() - 2) : str;
         }
     }
 
@@ -111,7 +148,7 @@ public class NativeUI {
 
         @Override
         public List<String> parameterNames() {
-            return List.of("spacing", "content");
+            return List.of("modifier", "content");
         }
 
         @Override
@@ -121,23 +158,32 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            double spacing = 0.5; // Default spacing
+            ModifierInstance modifierInstance = null;
             Callable lambda = null;
 
             for (Object arg : arguments) {
-                if (arg instanceof Double d) {
-                    spacing = d;
-                } else if (arg instanceof Callable callable) {
-                    lambda = callable;
+                if (arg instanceof ModifierInstance m) {
+                    modifierInstance = m;
+                } else if (arg instanceof Callable c) {
+                    lambda = c;
                 }
             }
             if (lambda == null) {
-                throw new RuntimeException("Column requires a lambda content block.");
+                throw new RuntimeException("Column requires content.");
             }
 
             VBox column = new VBox();
-            column.setSpacing(spacing);
-            column.setStyle("-fx-padding: " + spacing + "px;");
+            column.setSpacing(5);
+            if (modifierInstance != null) {
+                column.setStyle(modifierInstance.buildCss());
+                if (modifierInstance.cssProperties.containsKey("-fx-padding")) {
+                    var padding = modifierInstance.cssProperties.get("-fx-padding").replace("px", "");
+                    try {
+                        column.setSpacing(Double.parseDouble(padding));
+                    } catch (Exception _) {
+                    }
+                }
+            }
 
             if (interpreter.uiContext.isEmpty()) {
                 throw new RuntimeException("Column must be called inside an UI container.");
@@ -161,7 +207,7 @@ public class NativeUI {
 
         @Override
         public List<String> parameterNames() {
-            return List.of("spacing", "content");
+            return List.of("modifier", "content");
         }
 
         @Override
@@ -171,24 +217,33 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            double spacing = 10.0; // Default spacing
+            ModifierInstance modifierInstance = null;
             Callable lambda = null;
 
             for (Object arg : arguments) {
-                if (arg instanceof Double d) {
-                    spacing = d;
-                } else if (arg instanceof Callable callable) {
-                    lambda = callable;
+                if (arg instanceof ModifierInstance m) {
+                    modifierInstance = m;
+                } else if (arg instanceof Callable c) {
+                    lambda = c;
                 }
             }
 
             if (lambda == null) {
-                throw new RuntimeException("Row requires a lambda content block.");
+                throw new RuntimeException("Row requires content.");
             }
 
             HBox row = new HBox();
-            row.setSpacing(spacing);
-            row.setStyle("-fx-padding: " + spacing + "px;");
+            row.setSpacing(10);
+            if (modifierInstance != null) {
+                row.setStyle(modifierInstance.buildCss());
+                if (modifierInstance.cssProperties.containsKey("-fx-padding")) {
+                    var padding = modifierInstance.cssProperties.get("-fx-padding").replace("px", "");
+                    try {
+                        row.setSpacing(Double.parseDouble(padding));
+                    } catch (Exception _) {
+                    }
+                }
+            }
 
             if (interpreter.uiContext.isEmpty()) {
                 throw new RuntimeException("Row must be called inside an UI container.");
@@ -207,30 +262,56 @@ public class NativeUI {
     public static class Button implements Callable {
         @Override
         public int arity() {
-            return 2;
+            return 3;
         }
 
         @Override
         public List<String> parameterNames() {
-            return List.of("text", "onClick");
+            return List.of("text", "modifier", "onClick");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 2 && argCount <= arity();
         }
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            if (!(arguments.get(0) instanceof String text)) {
-                throw new RuntimeException("Button requires a text string.");
+            String text = null;
+            ModifierInstance modifierInstance = null;
+            Callable lambda = null;
+
+            for (Object arg : arguments) {
+                if (arg instanceof String s) {
+                    text = s;
+                } else if (arg instanceof ModifierInstance m) {
+                    modifierInstance = m;
+                } else if (arg instanceof Callable c) {
+                    lambda = c;
+                }
             }
-            if (!(arguments.get(1) instanceof Callable lambda)) {
-                throw new RuntimeException("Button requires an onClick lambda.");
+
+            if (text == null) {
+                throw new RuntimeException("Button requires a text.");
             }
+            if (lambda == null) {
+                throw new RuntimeException("Button requires an onClick.");
+            }
+
             javafx.scene.control.Button button = new javafx.scene.control.Button(text);
+            if (modifierInstance != null) {
+                button.setStyle(modifierInstance.buildCss());
+            }
+
+            Callable finalLambda = lambda;
             button.setOnAction(_ -> {
                 try {
-                    lambda.call(List.of(), interpreter);
+                    finalLambda.call(List.of(), interpreter);
                 } catch (RuntimeException e) {
                     System.err.println("UI Error: " + e.getMessage());
                 }
             });
+
             if (interpreter.uiContext.isEmpty()) {
                 throw new RuntimeException("Button must be called inside an UI component.");
             }
@@ -374,27 +455,47 @@ public class NativeUI {
     public static class TextField implements Callable {
         @Override
         public int arity() {
-            return 1;
+            return 2;
         }
 
         @Override
         public List<String> parameterNames() {
-            return List.of("state");
+            return List.of("state", "modifier");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 1 && argCount <= arity();
         }
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            if (!(arguments.getFirst() instanceof State state)) {
-                throw new RuntimeException("TextField requires state object.");
+            State state = null;
+            ModifierInstance modifierInstance = null;
+
+            for (Object arg : arguments) {
+                if (arg instanceof State s) {
+                    state = s;
+                } else if (arg instanceof ModifierInstance m) {
+                    modifierInstance = m;
+                }
+            }
+
+            if (state == null) {
+                throw new RuntimeException("TextField requires a state object.");
             }
 
             javafx.scene.control.TextField textField = new javafx.scene.control.TextField();
             textField.setText(state.value != null ? state.value.toString() : "");
+            if (modifierInstance != null) {
+                textField.setStyle(modifierInstance.buildCss());
+            }
 
+            State finalState = state;
             textField.textProperty().addListener((_, _, newValue) -> {
-                if (!newValue.equals(state.value)) {
-                    state.value = newValue;
-                    state.listeners.removeIf(listener -> !listener.update());
+                if (!newValue.equals(finalState.value)) {
+                    finalState.value = newValue;
+                    finalState.listeners.removeIf(listener -> !listener.update());
                 }
             });
 
@@ -404,7 +505,7 @@ public class NativeUI {
                     return false;
                 }
                 Platform.runLater(() -> {
-                    String newStateValue = state.value != null ? state.value.toString() : "";
+                    String newStateValue = finalState.value != null ? finalState.value.toString() : "";
                     if (!textField.getText().equals(newStateValue)) {
                         textField.setText(newStateValue);
                     }
@@ -416,6 +517,102 @@ public class NativeUI {
             }
             interpreter.uiContext.peek().getChildren().add(textField);
             return null;
+        }
+    }
+
+    public static class ModifierInstance implements NativeObject {
+        public final Map<String, String> cssProperties = new HashMap<>();
+
+        @Override
+        public Object getMember(Token member) {
+            return switch (member.lexeme()) {
+                case "padding" -> new Callable() {
+                    @Override
+                    public int arity() {
+                        return 1;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        cssProperties.put("-fx-padding", arguments.getFirst().toString() + "px");
+                        return ModifierInstance.this;
+                    }
+                };
+                case "fontSize" -> new Callable() {
+                    @Override
+                    public int arity() {
+                        return 1;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        cssProperties.put("-fx-font-size", arguments.getFirst().toString() + "px");
+                        return ModifierInstance.this;
+                    }
+                };
+                case "textColor" -> new Callable() {
+                    @Override
+                    public int arity() {
+                        return 1;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        cssProperties.put("-fx-text-fill", arguments.getFirst().toString());
+                        return ModifierInstance.this;
+                    }
+                };
+                case "background" -> new Callable() {
+                    @Override
+                    public int arity() {
+                        return 1;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        cssProperties.put("-fx-background-color", arguments.getFirst().toString());
+                        return ModifierInstance.this;
+                    }
+                };
+                case "border" -> new Callable() {
+                    @Override
+                    public int arity() {
+                        return 1;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        cssProperties.put("-fx-border-color", arguments.getFirst().toString());
+                        cssProperties.put("-fx-border-width", "2px");
+                        return ModifierInstance.this;
+                    }
+                };
+                default -> throw new RuntimeException("Unknown Modifier member: '" + member.lexeme() + "'.");
+            };
+        }
+
+        @Override
+        public void setMember(Token member, Object value) {
+            throw new RuntimeException("Modifiers are immutable.");
+        }
+
+        public String buildCss() {
+            StringBuilder css = new StringBuilder();
+            cssProperties.forEach((key, value) -> css.append(key).append(": ").append(value).append("; "));
+            return css.toString();
+        }
+    }
+
+    public static class ModifierBase implements NativeObject {
+        @Override
+        public Object getMember(Token member) {
+            ModifierInstance modifierInstance = new ModifierInstance();
+            return modifierInstance.getMember(member);
+        }
+
+        @Override
+        public void setMember(Token member, Object value) {
+            throw new RuntimeException("Modifiers are immutable.");
         }
     }
 }

@@ -30,6 +30,7 @@ public class Resolver {
         scopes.peek().put("State", true);
         scopes.peek().put("Observe", true);
         scopes.peek().put("TextField", true);
+        scopes.peek().put("Modifier", true);
         statements.forEach(this::resolve);
         endNewScope();
     }

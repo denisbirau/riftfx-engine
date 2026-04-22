@@ -34,6 +34,7 @@ public class Interpreter {
         globalEnvironment.define("State", new NativeUI.CreateState());
         globalEnvironment.define("Observe", new NativeUI.Observe());
         globalEnvironment.define("TextField", new NativeUI.TextField());
+        globalEnvironment.define("Modifier", new NativeUI.ModifierBase());
     }
 
     public void interpret() {
@@ -344,6 +345,8 @@ public class Interpreter {
 
         try {
             return callable.call(arguments, this);
+        } catch (RuntimeError error) {
+            throw error;
         } catch (RuntimeException error) {
             throw new RuntimeError(error.getMessage(), expr.leftParenthesis());
         }
