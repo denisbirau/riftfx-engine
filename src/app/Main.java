@@ -50,18 +50,15 @@ public class Main {
             if (errorReporter.hadError()) exit(65);
 
             UIRenderer renderer = new JavaFXRenderer();
-
             Interpreter interpreter = new Interpreter(statements, errorReporter, renderer);
-            interpreter.interpret();
-            if (errorReporter.hadError()) exit(70);
 
             Platform.runLater(() -> {
-                if (javafx.stage.Window.getWindows().isEmpty()) {
+                interpreter.interpret();
+                if (errorReporter.hadError()) {
                     Platform.exit();
-                    System.exit(0);
+                    exit(70);
                 }
             });
-
         } catch (IOException e) {
             System.err.println("No such file or directory: " + e.getMessage());
         }

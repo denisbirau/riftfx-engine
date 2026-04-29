@@ -305,7 +305,7 @@ public class Interpreter {
                 // 2. Positional Argument / Trailing Lambda
                 boolean isTrailingLambda = (i == expr.arguments().size() - 1) && (arg.value() instanceof Expr.Lambda);
 
-                if (isTrailingLambda && namedArgumentSeen) {
+                if (isTrailingLambda) {
                     // Trailing lambdas always bind to the LAST parameter
                     targetIndex = callable.arity() - 1;
                 } else {

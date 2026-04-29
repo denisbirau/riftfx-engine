@@ -2,7 +2,6 @@ package stdlib;
 
 import error.RuntimeError;
 import interpreter.NativeObject;
-import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
@@ -17,6 +16,17 @@ import java.util.List;
 import java.util.Map;
 
 public class NativeUI {
+    public static <T> T getArgument(List<Object> arguments, int index, Class<T> tClass, T defaultValue) {
+        if (index >= arguments.size() || arguments.get(index) == null) {
+            return defaultValue;
+        }
+        Object argument = arguments.get(index);
+        if (!tClass.isInstance(argument)) {
+            throw new RuntimeException("Argument at position " + (index + 1) + " must be of type " + tClass.getSimpleName() + ".");
+        }
+        return tClass.cast(argument);
+    }
+
     public static class Window implements Callable {
         @Override
         public int arity() {
@@ -35,19 +45,9 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            String title = null;
-            ModifierInstance modifierInstance = null;
-            Callable lambda = null;
-
-            for (Object arg : arguments) {
-                if (arg instanceof String s) {
-                    title = s;
-                } else if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                } else if (arg instanceof Callable c) {
-                    lambda = c;
-                }
-            }
+            String title = getArgument(arguments, 0, String.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
+            Callable lambda = getArgument(arguments, 2, Callable.class, null);
 
             if (title == null) {
                 throw new RuntimeException("Window requires a title.");
@@ -56,35 +56,31 @@ public class NativeUI {
                 throw new RuntimeException("Window requires content.");
             }
 
-            final String finalTitle = title;
-            final ModifierInstance finalModifierInstance = modifierInstance;
-            final Callable finalLambda = lambda;
+            Stage stage = new Stage();
+            stage.setTitle(title);
+            VBox root = new VBox();
 
-            Platform.runLater(() -> {
-                Stage stage = new Stage();
-                stage.setTitle(finalTitle);
-                VBox root = new VBox();
+            if (modifierInstance != null) {
+                root.setStyle(modifierInstance.buildCss());
+            }
 
-                if (finalModifierInstance != null) {
-                    root.setStyle(finalModifierInstance.buildCss());
+            interpreter.renderer.pushContainer(root);
+            try {
+                lambda.call(List.of(), interpreter);
+            } catch (RuntimeException e) {
+                if (e instanceof RuntimeError runtimeError) {
+                    interpreter.errorReporter.report("UI Layout Failed: " + runtimeError.getMessage(), runtimeError.getToken());
+                } else {
+                    System.err.println("Fatal UI Error: " + e.getMessage());
                 }
+            } finally {
+                interpreter.renderer.popContainer();
+            }
 
-                interpreter.renderer.pushContainer(root);
-                try {
-                    finalLambda.call(List.of(), interpreter);
-                } catch (RuntimeException e) {
-                    if (e instanceof RuntimeError runtimeError) {
-                        interpreter.errorReporter.report("UI Layout Failed: " + runtimeError.getMessage(), runtimeError.getToken());
-                    } else {
-                        System.err.println("Fatal UI Error: " + e.getMessage());
-                    }
-                } finally {
-                    interpreter.renderer.popContainer();
-                }
-                Scene scene = new Scene(root, 400, 300);
-                stage.setScene(scene);
-                stage.show();
-            });
+            Scene scene = new Scene(root, 400, 300);
+            stage.setScene(scene);
+            stage.show();
+
             return null;
         }
     }
@@ -107,18 +103,18 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
+            Object contentArgument = arguments.isEmpty() ? null : arguments.getFirst();
             String content = "";
-            ModifierInstance modifierInstance = null;
 
-            for (Object arg : arguments) {
-                if (arg instanceof String s) {
-                    content = s;
-                } else if (arg instanceof Double d) {
-                    content = stringify(d);
-                } else if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                }
+            if (contentArgument instanceof Double d) {
+                content = stringify(d);
+            } else if (contentArgument instanceof String s) {
+                content = s;
+            } else if (contentArgument != null) {
+                content = contentArgument.toString();
             }
+
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
 
             Label label = new Label(content);
             if (modifierInstance != null) {
@@ -160,16 +156,8 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            ModifierInstance modifierInstance = null;
-            Callable lambda = null;
-
-            for (Object arg : arguments) {
-                if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                } else if (arg instanceof Callable c) {
-                    lambda = c;
-                }
-            }
+            ModifierInstance modifierInstance = getArgument(arguments, 0, ModifierInstance.class, null);
+            Callable lambda = getArgument(arguments, 1, Callable.class, null);
 
             if (lambda == null) {
                 throw new RuntimeException(getClass().getSimpleName() + " requires a content block.");
@@ -273,19 +261,9 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            String text = null;
-            ModifierInstance modifierInstance = null;
-            Callable lambda = null;
-
-            for (Object arg : arguments) {
-                if (arg instanceof String s) {
-                    text = s;
-                } else if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                } else if (arg instanceof Callable c) {
-                    lambda = c;
-                }
-            }
+            String text = getArgument(arguments, 0, String.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
+            Callable lambda = getArgument(arguments, 2, Callable.class, null);
 
             if (text == null) {
                 throw new RuntimeException("Button requires a text.");
@@ -299,12 +277,15 @@ public class NativeUI {
                 button.setStyle(modifierInstance.buildCss());
             }
 
-            Callable finalLambda = lambda;
             button.setOnAction(_ -> {
                 try {
-                    finalLambda.call(List.of(), interpreter);
+                    lambda.call(List.of(), interpreter);
                 } catch (RuntimeException e) {
-                    System.err.println("UI Error: " + e.getMessage());
+                    if (e instanceof RuntimeError runtimeError) {
+                        interpreter.errorReporter.report("UI Error: " + runtimeError.getMessage(), runtimeError.getToken());
+                    } else {
+                        System.err.println("Fatal UI Error: " + e.getMessage());
+                    }
                 }
             });
 
@@ -358,7 +339,7 @@ public class NativeUI {
                     @Override
                     public Object call(List<Object> arguments, Interpreter interpreter) {
                         value = arguments.getFirst();
-                        listeners.removeIf(listener -> !listener.update());
+                        listeners.removeIf(uiListener -> !uiListener.update());
                         return null;
                     }
                 };
@@ -402,10 +383,13 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            if (!(arguments.get(0) instanceof State state)) {
+            State state = getArgument(arguments, 0, State.class, null);
+            Callable lambda = getArgument(arguments, 1, Callable.class, null);
+
+            if (state == null) {
                 throw new RuntimeException("Observe requires a state object.");
             }
-            if (!(arguments.get(1) instanceof Callable lambda)) {
+            if (lambda == null) {
                 throw new RuntimeException("Observe requires a lambda content block.");
             }
 
@@ -424,24 +408,23 @@ public class NativeUI {
                 }
 
                 // 2. THE RECOMPOSITION
-                Platform.runLater(() -> {
-                    container.getChildren().clear();
-                    interpreter.renderer.pushContainer(container);
-                    try {
-                        lambda.call(List.of(), interpreter);
-                    } catch (RuntimeException e) {
-                        if (e instanceof RuntimeError runtimeError) {
-                            interpreter.errorReporter.report("Recomposition Failed: " + runtimeError.getMessage(), runtimeError.getToken());
-                        } else {
-                            System.err.println("Fatal UI Error: " + e.getMessage());
-                        }
-                    } finally {
-                        interpreter.renderer.popContainer();
+                container.getChildren().clear();
+                interpreter.renderer.pushContainer(container);
+                try {
+                    lambda.call(List.of(), interpreter);
+                } catch (RuntimeException e) {
+                    if (e instanceof RuntimeError runtimeError) {
+                        interpreter.errorReporter.report("Recomposition Failed: " + runtimeError.getMessage(), runtimeError.getToken());
+                    } else {
+                        System.err.println("Fatal UI Error: " + e.getMessage());
                     }
-                });
+                } finally {
+                    interpreter.renderer.popContainer();
+                }
 
                 return true; // Still alive, keep listening!
             };
+
             state.listeners.add(recompose);
             recompose.update();
             return null;
@@ -466,16 +449,8 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            State state = null;
-            ModifierInstance modifierInstance = null;
-
-            for (Object arg : arguments) {
-                if (arg instanceof State s) {
-                    state = s;
-                } else if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                }
-            }
+            State state = getArgument(arguments, 0, State.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
 
             if (state == null) {
                 throw new RuntimeException("TextField requires a state object.");
@@ -487,11 +462,10 @@ public class NativeUI {
                 textField.setStyle(modifierInstance.buildCss());
             }
 
-            State finalState = state;
             textField.textProperty().addListener((_, _, newValue) -> {
-                if (!newValue.equals(finalState.value)) {
-                    finalState.value = newValue;
-                    finalState.listeners.removeIf(listener -> !listener.update());
+                if (!newValue.equals(state.value)) {
+                    state.value = newValue;
+                    state.listeners.removeIf(uiListener -> !uiListener.update());
                 }
             });
 
@@ -500,14 +474,14 @@ public class NativeUI {
                 if (textField.getParent() == null && textField.getScene() == null) {
                     return false;
                 }
-                Platform.runLater(() -> {
-                    String newStateValue = finalState.value != null ? finalState.value.toString() : "";
-                    if (!textField.getText().equals(newStateValue)) {
-                        textField.setText(newStateValue);
-                    }
-                });
+
+                String newStateValue = state.value != null ? state.value.toString() : "";
+                if (!textField.getText().equals(newStateValue)) {
+                    textField.setText(newStateValue);
+                }
                 return true;
             });
+
             if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("TextField must be called inside an UI container.");
             }
@@ -517,7 +491,15 @@ public class NativeUI {
     }
 
     public static class ModifierInstance implements NativeObject {
-        public final Map<String, String> cssProperties = new HashMap<>();
+        public final Map<String, String> cssProperties;
+
+        public ModifierInstance() {
+            this.cssProperties = new HashMap<>();
+        }
+
+        public ModifierInstance(Map<String, String> cssProperties) {
+            this.cssProperties = new HashMap<>(cssProperties);
+        }
 
         @Override
         public Object getMember(Token member) {
@@ -530,8 +512,9 @@ public class NativeUI {
 
                     @Override
                     public Object call(List<Object> arguments, Interpreter interpreter) {
-                        cssProperties.put("-fx-padding", arguments.getFirst().toString() + "px");
-                        return ModifierInstance.this;
+                        ModifierInstance newModifier = new ModifierInstance(cssProperties);
+                        newModifier.cssProperties.put("-fx-padding", arguments.getFirst().toString() + "px");
+                        return newModifier;
                     }
                 };
                 case "fontSize" -> new Callable() {
@@ -542,8 +525,9 @@ public class NativeUI {
 
                     @Override
                     public Object call(List<Object> arguments, Interpreter interpreter) {
-                        cssProperties.put("-fx-font-size", arguments.getFirst().toString() + "px");
-                        return ModifierInstance.this;
+                        ModifierInstance newModifier = new ModifierInstance(cssProperties);
+                        newModifier.cssProperties.put("-fx-font-size", arguments.getFirst().toString() + "px");
+                        return newModifier;
                     }
                 };
                 case "textColor" -> new Callable() {
@@ -554,8 +538,9 @@ public class NativeUI {
 
                     @Override
                     public Object call(List<Object> arguments, Interpreter interpreter) {
-                        cssProperties.put("-fx-text-fill", arguments.getFirst().toString());
-                        return ModifierInstance.this;
+                        ModifierInstance newModifier = new ModifierInstance(cssProperties);
+                        newModifier.cssProperties.put("-fx-text-fill", arguments.getFirst().toString());
+                        return newModifier;
                     }
                 };
                 case "background" -> new Callable() {
@@ -566,8 +551,9 @@ public class NativeUI {
 
                     @Override
                     public Object call(List<Object> arguments, Interpreter interpreter) {
-                        cssProperties.put("-fx-background-color", arguments.getFirst().toString());
-                        return ModifierInstance.this;
+                        ModifierInstance newModifier = new ModifierInstance(cssProperties);
+                        newModifier.cssProperties.put("-fx-background-color", arguments.getFirst().toString());
+                        return newModifier;
                     }
                 };
                 case "border" -> new Callable() {
@@ -578,9 +564,10 @@ public class NativeUI {
 
                     @Override
                     public Object call(List<Object> arguments, Interpreter interpreter) {
-                        cssProperties.put("-fx-border-color", arguments.getFirst().toString());
-                        cssProperties.put("-fx-border-width", "2px");
-                        return ModifierInstance.this;
+                        ModifierInstance newModifier = new ModifierInstance(cssProperties);
+                        newModifier.cssProperties.put("-fx-border-color", arguments.getFirst().toString());
+                        newModifier.cssProperties.put("-fx-border-width", "2px");
+                        return newModifier;
                     }
                 };
                 default -> throw new RuntimeException("Unknown Modifier member: '" + member.lexeme() + "'.");
@@ -630,19 +617,9 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            String text = "";
-            State state = null;
-            ModifierInstance modifierInstance = null;
-
-            for (Object arg : arguments) {
-                if (arg instanceof String s) {
-                    text = s;
-                } else if (arg instanceof State s) {
-                    state = s;
-                } else if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                }
-            }
+            String text = getArgument(arguments, 0, String.class, "");
+            State state = getArgument(arguments, 1, State.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 2, ModifierInstance.class, null);
 
             if (state == null) {
                 throw new RuntimeException("Checkbox requires a state object.");
@@ -655,11 +632,10 @@ public class NativeUI {
                 checkBox.setStyle(modifierInstance.buildCss());
             }
 
-            State finalState = state;
             checkBox.selectedProperty().addListener((_, _, newValue) -> {
-                if (!newValue.equals(finalState.value)) {
-                    finalState.value = newValue;
-                    finalState.listeners.removeIf(uiListener -> !uiListener.update());
+                if (!newValue.equals(state.value)) {
+                    state.value = newValue;
+                    state.listeners.removeIf(uiListener -> !uiListener.update());
                 }
             });
 
@@ -667,12 +643,12 @@ public class NativeUI {
                 if (checkBox.getParent() == null && checkBox.getScene() == null) {
                     return false;
                 }
-                Platform.runLater(() -> {
-                    boolean newStateValue = finalState.value instanceof Boolean ? (Boolean) finalState.value : false;
-                    if (checkBox.isSelected() != newStateValue) {
-                        checkBox.setSelected(newStateValue);
-                    }
-                });
+
+                boolean newStateValue = state.value instanceof Boolean ? (Boolean) state.value : false;
+                if (checkBox.isSelected() != newStateValue) {
+                    checkBox.setSelected(newStateValue);
+                }
+
                 return true;
             });
 
@@ -703,26 +679,10 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            double min = 0;
-            double max = 100;
-            State state = null;
-            ModifierInstance modifierInstance = null;
-
-            int doubleCount = 0;
-            for (Object arg : arguments) {
-                if (arg instanceof Double d) {
-                    if (doubleCount == 0) {
-                        min = d;
-                    } else if (doubleCount == 1) {
-                        max = d;
-                    }
-                    doubleCount++;
-                } else if (arg instanceof State s) {
-                    state = s;
-                } else if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                }
-            }
+            double min = getArgument(arguments, 0, Double.class, 0.0);
+            double max = getArgument(arguments, 1, Double.class, 100.0);
+            State state = getArgument(arguments, 2, State.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 3, ModifierInstance.class, null);
 
             if (state == null) {
                 throw new RuntimeException("Slider requires a state object.");
@@ -734,26 +694,22 @@ public class NativeUI {
                 slider.setStyle(modifierInstance.buildCss());
             }
 
-            State finalState = state;
-
             slider.valueProperty().addListener((_, _, newValue) -> {
-                if (!newValue.equals(finalState.value)) {
-                    finalState.value = newValue.doubleValue();
-                    finalState.listeners.removeIf(uiListener -> !uiListener.update());
+                if (!newValue.equals(state.value)) {
+                    state.value = newValue.doubleValue();
+                    state.listeners.removeIf(uiListener -> !uiListener.update());
                 }
             });
 
-            double finalMin = min;
             state.listeners.add(() -> {
                 if (slider.getParent() == null && slider.getScene() == null) {
                     return false;
                 }
-                Platform.runLater(() -> {
-                    double newStateValue = finalState.value instanceof Double ? (Double) finalState.value : finalMin;
-                    if (slider.getValue() != newStateValue) {
-                        slider.setValue(newStateValue);
-                    }
-                });
+
+                double newStateValue = state.value instanceof Double ? (Double) state.value : min;
+                if (slider.getValue() != newStateValue) {
+                    slider.setValue(newStateValue);
+                }
                 return true;
             });
 
@@ -761,7 +717,6 @@ public class NativeUI {
                 throw new RuntimeException("Slider must be called inside an UI container.");
             }
             interpreter.renderer.addComponent(slider);
-
             return null;
         }
     }
@@ -784,16 +739,8 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            String url = null;
-            ModifierInstance modifierInstance = null;
-
-            for (Object arg : arguments) {
-                if (arg instanceof String s) {
-                    url = s;
-                } else if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                }
-            }
+            String url = getArgument(arguments, 0, String.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
 
             if (url == null) {
                 throw new RuntimeException("Image requires an URL or file path.");
@@ -820,7 +767,6 @@ public class NativeUI {
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
             Pane spacer = new Pane();
-
             HBox.setHgrow(spacer, Priority.ALWAYS);
             VBox.setVgrow(spacer, Priority.ALWAYS);
 
@@ -828,7 +774,6 @@ public class NativeUI {
                 throw new RuntimeException("Spacer must be called inside an UI container.");
             }
             interpreter.renderer.addComponent(spacer);
-
             return null;
         }
     }
@@ -851,16 +796,8 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            State state = null;
-            ModifierInstance modifierInstance = null;
-
-            for (Object arg : arguments) {
-                if (arg instanceof State s) {
-                    state = s;
-                } else if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                }
-            }
+            State state = getArgument(arguments, 0, State.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
 
             if (state == null) {
                 throw new RuntimeException("PasswordField requires a state object.");
@@ -873,11 +810,10 @@ public class NativeUI {
                 passwordField.setStyle(modifierInstance.buildCss());
             }
 
-            State finalState = state;
             passwordField.textProperty().addListener((_, _, newValue) -> {
-                if (!newValue.equals(finalState.value)) {
-                    finalState.value = newValue;
-                    finalState.listeners.removeIf(uiListener -> !uiListener.update());
+                if (!newValue.equals(state.value)) {
+                    state.value = newValue;
+                    state.listeners.removeIf(uiListener -> !uiListener.update());
                 }
             });
 
@@ -885,12 +821,11 @@ public class NativeUI {
                 if (passwordField.getParent() == null && passwordField.getScene() == null) {
                     return false;
                 }
-                Platform.runLater(() -> {
-                    String newStateValue = finalState.value != null ? finalState.value.toString() : "";
-                    if (!passwordField.getText().equals(newStateValue)) {
-                        passwordField.setText(newStateValue);
-                    }
-                });
+
+                String newStateValue = state.value != null ? state.value.toString() : "";
+                if (!passwordField.getText().equals(newStateValue)) {
+                    passwordField.setText(newStateValue);
+                }
                 return true;
             });
 
@@ -898,7 +833,6 @@ public class NativeUI {
                 throw new RuntimeException("PasswordField must be called inside an UI container.");
             }
             interpreter.renderer.addComponent(passwordField);
-
             return null;
         }
     }
@@ -921,16 +855,8 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            State state = null;
-            ModifierInstance modifierInstance = null;
-
-            for (Object arg : arguments) {
-                if (arg instanceof State s) {
-                    state = s;
-                } else if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                }
-            }
+            State state = getArgument(arguments, 0, State.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
 
             if (state == null) {
                 throw new RuntimeException("ProgressBar requires a state object.");
@@ -943,17 +869,15 @@ public class NativeUI {
                 progressBar.setStyle(modifierInstance.buildCss());
             }
 
-            State finalState = state;
             state.listeners.add(() -> {
                 if (progressBar.getParent() == null && progressBar.getScene() == null) {
                     return false;
                 }
-                Platform.runLater(() -> {
-                    double newStateValue = finalState.value instanceof Double ? (Double) finalState.value : 0.0;
-                    if (progressBar.getProgress() != newStateValue) {
-                        progressBar.setProgress(newStateValue);
-                    }
-                });
+
+                double newStateValue = state.value instanceof Double ? (Double) state.value : 0.0;
+                if (progressBar.getProgress() != newStateValue) {
+                    progressBar.setProgress(newStateValue);
+                }
                 return true;
             });
 
@@ -984,16 +908,8 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            ModifierInstance modifierInstance = null;
-            Callable lambda = null;
-
-            for (Object arg : arguments) {
-                if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                } else if (arg instanceof Callable c) {
-                    lambda = c;
-                }
-            }
+            ModifierInstance modifierInstance = getArgument(arguments, 0, ModifierInstance.class, null);
+            Callable lambda = getArgument(arguments, 1, Callable.class, null);
 
             if (lambda == null) {
                 throw new RuntimeException("ScrollPane requires a content block.");
@@ -1045,16 +961,13 @@ public class NativeUI {
 
         @Override
         public Object call(List<Object> arguments, Interpreter interpreter) {
-            State state = null;
-            ModifierInstance modifierInstance = null;
-            List<String> options = new ArrayList<>();
+            State state = getArgument(arguments, 0, State.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
 
-            for (Object arg : arguments) {
-                if (arg instanceof State s) {
-                    state = s;
-                } else if (arg instanceof ModifierInstance m) {
-                    modifierInstance = m;
-                } else if (arg instanceof String s) {
+            List<String> options = new ArrayList<>();
+            for (int i = 2; i < arguments.size(); i++) {
+                Object arg = arguments.get(i);
+                if (arg instanceof String s) {
                     options.add(s);
                 } else if (arg instanceof List<?> l) {
                     for (Object elem : l) {
@@ -1081,11 +994,10 @@ public class NativeUI {
                 comboBox.setStyle(modifierInstance.buildCss());
             }
 
-            State finalState = state;
             comboBox.valueProperty().addListener((_, _, newValue) -> {
-                if (newValue != null && !newValue.equals(finalState.value)) {
-                    finalState.value = newValue;
-                    finalState.listeners.removeIf(uiListener -> !uiListener.update());
+                if (newValue != null && !newValue.equals(state.value)) {
+                    state.value = newValue;
+                    state.listeners.removeIf(uiListener -> !uiListener.update());
                 }
             });
 
@@ -1093,12 +1005,11 @@ public class NativeUI {
                 if (comboBox.getParent() == null && comboBox.getScene() == null) {
                     return false;
                 }
-                Platform.runLater(() -> {
-                    String newStateValue = finalState.value != null ? finalState.value.toString() : "";
-                    if (!newStateValue.equals(comboBox.getValue()) && options.contains(newStateValue)) {
-                        comboBox.setValue(newStateValue);
-                    }
-                });
+
+                String newStateValue = state.value != null ? state.value.toString() : "";
+                if (!newStateValue.equals(comboBox.getValue()) && options.contains(newStateValue)) {
+                    comboBox.setValue(newStateValue);
+                }
                 return true;
             });
 

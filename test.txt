@@ -1,29 +1,21 @@
-let themeState = State("Light");
-let dummyState = State("Test...");
+def CustomCounter(initialValue) {
+    let count = State(initialValue);
 
-Window("Settings Panel", Modifier.background("white")) {
-    // The ScrollPane wraps our column so it doesn't get cut off!
-    ScrollPane(Modifier.padding(10.0)) {
-        Column(Modifier.padding(10.0)) {
+    Observe(count) {
+        Row(Modifier.padding(5)) {
+            Text("Current Count: ");
+            Text(count.get());
 
-            Text("Select Theme:");
-            // Check out the vararg options at the end!
-            ComboBox(themeState, Modifier.fontSize(16.0), "Light", "Dark", "System");
-
-            Observe(themeState) {
-                Text("Current Theme: ${themeState.get()}");
+            Button("Increment", Modifier.padding(10)) {
+                count.set(count.get() + 1);
             };
-
-            // Let's generate a bunch of dummy fields to force the scrollbar to appear
-            Text("Extra Settings:", Modifier.padding(20.0));
-            TextField(dummyState);
-            TextField(dummyState);
-            TextField(dummyState);
-            TextField(dummyState);
-            TextField(dummyState);
-            TextField(dummyState);
-            TextField(dummyState);
-            TextField(dummyState);
         };
+    };
+}
+
+Window("Multi-Counter") {
+    Column {
+        CustomCounter(0);
+        CustomCounter(100);
     };
 };
