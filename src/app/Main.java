@@ -1,5 +1,7 @@
 package app;
 
+import interpreter.JavaFXRenderer;
+import interpreter.UIRenderer;
 import resolution.Resolver;
 import ast.Stmt;
 import error.ErrorReporter;
@@ -47,7 +49,9 @@ public class Main {
             resolver.resolve(statements);
             if (errorReporter.hadError()) exit(65);
 
-            Interpreter interpreter = new Interpreter(statements, errorReporter);
+            UIRenderer renderer = new JavaFXRenderer();
+
+            Interpreter interpreter = new Interpreter(statements, errorReporter, renderer);
             interpreter.interpret();
             if (errorReporter.hadError()) exit(70);
 
@@ -68,58 +72,3 @@ public class Main {
         System.exit(code);
     }
 }
-
-// I probably need this
-// TODO: Collections (Lists and Maps)
-// TODO: Lambda Functions
-
-// Maybe too easy to even bother
-// TODO: Static methods and properties
-// TODO: Getters and Setters
-// TODO: Const Variables
-// TODO: String Interpolation
-// TODO: Better Input / Output
-// TODO: Standard Library (Functions and Classes)
-// TODO: Modules
-// TODO: Shorthand Assignment Operators (+=, -=, *=, /= ...)
-// TODO: Warnings (ex: A variable was not used.)
-// TODO: Continue Statement
-
-// Harder todos
-// TODO: IDE Support (Language Server Protocol)
-// TODO: JIT/AOT (Look into Truffle, GraalVM)
-
-// Game changers
-// TODO: Maybe switch to Static Typed Language
-// TODO: Maybe switch to Compiler
-// TODO: Maybe switch the backend programming language(Scala/C/Rust)
-// TODO: Maybe switch to DSL(ex: GUI, Game Engine)
-
-/* GUI idea:
-
-    Window(title: "Thesis Demo", width: 800, height: 600) {
-        VerticalLayout {
-            Text(value: "Hello, " + user.nameToken, size: 24)
-
-            Button(
-                text: "Click Me",
-                onClick: () => {
-                    user.nameToken = "Professor"; // Changing state updates the UI automatically
-                }
-            )
-        }
-    }
-*/
-
-/* Game Engine idea:
-
-    entity Player {
-        sprite: "hero.png"
-        x: 100
-        y: 100
-
-        onUpdate() {
-            if (Input.isPressed("right")) this.x += 5
-        }
-    }
-*/

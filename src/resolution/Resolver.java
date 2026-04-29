@@ -4,7 +4,6 @@ import ast.Expr;
 import ast.Stmt;
 import error.ErrorReporter;
 import scanner.Token;
-import stdlib.StandardLibrary;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,11 +23,6 @@ public class Resolver {
     public Resolver(ErrorReporter errorReporter) {
         this.errorReporter = errorReporter;
         beginNewScope();
-        StandardLibrary.GLOBALS.keySet().forEach(this::defineNative);
-    }
-
-    private void defineNative(String name) {
-        scopes.peek().put(name, true);
     }
 
     public void resolve(List<Stmt> statements) {
@@ -85,7 +79,6 @@ public class Resolver {
                 return;
             }
         }
-        errorReporter.report("'" + identifier.lexeme() + "' was not declared.", identifier.line());
     }
 
     // Statement Handlers
@@ -226,7 +219,7 @@ public class Resolver {
 
     private void resolveAssignmentExpression(Expr.Assignment expr) {
         resolve(expr.expressionToAssign());
-        resolveLocal(expr.expressionToAssign(), expr.identifierToken());
+        resolveLocal(expr, expr.identifierToken());
     }
 
     private void resolveCallExpression(Expr.Call expr) {

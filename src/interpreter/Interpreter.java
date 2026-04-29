@@ -6,7 +6,6 @@ import error.ErrorReporter;
 import scanner.Token;
 import scanner.TokenType;
 import error.RuntimeError;
-import javafx.scene.layout.Pane;
 import stdlib.NativeArray;
 import stdlib.StandardLibrary;
 
@@ -18,11 +17,12 @@ public class Interpreter {
 
     private final List<Stmt> statements;
     public final ErrorReporter errorReporter;
-    public final Stack<Pane> uiContext = new Stack<>();
+    public final UIRenderer renderer;
 
-    public Interpreter(List<Stmt> statements, ErrorReporter errorReporter) {
+    public Interpreter(List<Stmt> statements, ErrorReporter errorReporter, UIRenderer renderer) {
         this.statements = statements;
         this.errorReporter = errorReporter;
+        this.renderer = renderer;
         StandardLibrary.GLOBALS.forEach(globalEnvironment::define);
     }
 

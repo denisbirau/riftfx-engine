@@ -69,7 +69,7 @@ public class NativeUI {
                     root.setStyle(finalModifierInstance.buildCss());
                 }
 
-                interpreter.uiContext.push(root);
+                interpreter.renderer.pushContainer(root);
                 try {
                     finalLambda.call(List.of(), interpreter);
                 } catch (RuntimeException e) {
@@ -79,7 +79,7 @@ public class NativeUI {
                         System.err.println("Fatal UI Error: " + e.getMessage());
                     }
                 } finally {
-                    interpreter.uiContext.pop();
+                    interpreter.renderer.popContainer();
                 }
                 Scene scene = new Scene(root, 400, 300);
                 stage.setScene(scene);
@@ -125,10 +125,10 @@ public class NativeUI {
                 label.setStyle(modifierInstance.buildCss());
             }
 
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("Text must be called inside an UI container.");
             }
-            interpreter.uiContext.peek().getChildren().add(label);
+            interpreter.renderer.addComponent(label);
             return null;
         }
 
@@ -187,17 +187,17 @@ public class NativeUI {
                 }
             }
 
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException(getClass().getSimpleName() + " must be called inside an UI container.");
             }
 
-            interpreter.uiContext.peek().getChildren().add(container);
-            interpreter.uiContext.push(container);
+            interpreter.renderer.addComponent(container);
+            interpreter.renderer.pushContainer(container);
 
             try {
                 lambda.call(List.of(), interpreter);
             } finally {
-                interpreter.uiContext.pop();
+                interpreter.renderer.popContainer();
             }
 
             return null;
@@ -308,10 +308,10 @@ public class NativeUI {
                 }
             });
 
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("Button must be called inside an UI component.");
             }
-            interpreter.uiContext.peek().getChildren().add(button);
+            interpreter.renderer.addComponent(button);
             return null;
         }
     }
@@ -410,10 +410,10 @@ public class NativeUI {
             }
 
             VBox container = new VBox();
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("Observe must be called inside an UI container.");
             }
-            interpreter.uiContext.peek().getChildren().add(container);
+            interpreter.renderer.addComponent(container);
 
             UIListener recompose = () -> {
                 // 1. THE LIFECYCLE CHECK
@@ -426,7 +426,7 @@ public class NativeUI {
                 // 2. THE RECOMPOSITION
                 Platform.runLater(() -> {
                     container.getChildren().clear();
-                    interpreter.uiContext.push(container);
+                    interpreter.renderer.pushContainer(container);
                     try {
                         lambda.call(List.of(), interpreter);
                     } catch (RuntimeException e) {
@@ -436,7 +436,7 @@ public class NativeUI {
                             System.err.println("Fatal UI Error: " + e.getMessage());
                         }
                     } finally {
-                        interpreter.uiContext.pop();
+                        interpreter.renderer.popContainer();
                     }
                 });
 
@@ -508,10 +508,10 @@ public class NativeUI {
                 });
                 return true;
             });
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("TextField must be called inside an UI container.");
             }
-            interpreter.uiContext.peek().getChildren().add(textField);
+            interpreter.renderer.addComponent(textField);
             return null;
         }
     }
@@ -676,10 +676,10 @@ public class NativeUI {
                 return true;
             });
 
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("Checkbox must be called inside an UI container.");
             }
-            interpreter.uiContext.peek().getChildren().add(checkBox);
+            interpreter.renderer.addComponent(checkBox);
 
             return null;
         }
@@ -757,10 +757,10 @@ public class NativeUI {
                 return true;
             });
 
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("Slider must be called inside an UI container.");
             }
-            interpreter.uiContext.peek().getChildren().add(slider);
+            interpreter.renderer.addComponent(slider);
 
             return null;
         }
@@ -802,10 +802,10 @@ public class NativeUI {
             javafx.scene.image.ImageView imageView = new javafx.scene.image.ImageView(new javafx.scene.image.Image(url));
             imageView.setPreserveRatio(true);
 
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("Image must be called inside an UI container.");
             }
-            interpreter.uiContext.peek().getChildren().add(imageView);
+            interpreter.renderer.addComponent(imageView);
 
             return null;
         }
@@ -824,10 +824,10 @@ public class NativeUI {
             HBox.setHgrow(spacer, Priority.ALWAYS);
             VBox.setVgrow(spacer, Priority.ALWAYS);
 
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("Spacer must be called inside an UI container.");
             }
-            interpreter.uiContext.peek().getChildren().add(spacer);
+            interpreter.renderer.addComponent(spacer);
 
             return null;
         }
@@ -894,10 +894,10 @@ public class NativeUI {
                 return true;
             });
 
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("PasswordField must be called inside an UI container.");
             }
-            interpreter.uiContext.peek().getChildren().add(passwordField);
+            interpreter.renderer.addComponent(passwordField);
 
             return null;
         }
@@ -957,10 +957,10 @@ public class NativeUI {
                 return true;
             });
 
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("ProgressBar must be called inside an UI container.");
             }
-            interpreter.uiContext.peek().getChildren().add(progressBar);
+            interpreter.renderer.addComponent(progressBar);
 
             return null;
         }
@@ -1011,16 +1011,16 @@ public class NativeUI {
             contentBox.setSpacing(5.0);
             scrollPane.setContent(contentBox);
 
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("ScrollPane must be called inside an UI container.");
             }
-            interpreter.uiContext.peek().getChildren().add(scrollPane);
+            interpreter.renderer.addComponent(scrollPane);
 
-            interpreter.uiContext.push(contentBox);
+            interpreter.renderer.pushContainer(contentBox);
             try {
                 lambda.call(List.of(), interpreter);
             } finally {
-                interpreter.uiContext.pop();
+                interpreter.renderer.popContainer();
             }
 
             return null;
@@ -1102,10 +1102,10 @@ public class NativeUI {
                 return true;
             });
 
-            if (interpreter.uiContext.isEmpty()) {
+            if (interpreter.renderer.isEmpty()) {
                 throw new RuntimeException("ComboBox must be called inside an UI container.");
             }
-            interpreter.uiContext.peek().getChildren().add(comboBox);
+            interpreter.renderer.addComponent(comboBox);
 
             return null;
         }
