@@ -1,74 +1,29 @@
-// 1. Math and Strings
-print "--- Testing Math & Strings ---";
-let greeting = "hello, compiler!";
-print greeting.toUpperCase();
-print "Square root of 81 is: " + Math.sqrt(81.0);
-print "Random number: " + Math.random();
+let themeState = State("Light");
+let dummyState = State("Test...");
 
-// 2. Arrays
-print "--- Testing Arrays ---";
-let list = [10, 20, 30];
-list.push(40);
-print "Array length: " + list.len;
-print "Second item: " + list[1];
+Window("Settings Panel", Modifier.background("white")) {
+    // The ScrollPane wraps our column so it doesn't get cut off!
+    ScrollPane(Modifier.padding(10.0)) {
+        Column(Modifier.padding(10.0)) {
 
-// 3. Classes and Inheritance
-print "--- Testing OOP ---";
-class Animal {
-    constructor(name) {
-        this.name = name;
-    }
+            Text("Select Theme:");
+            // Check out the vararg options at the end!
+            ComboBox(themeState, Modifier.fontSize(16.0), "Light", "Dark", "System");
 
-    speak() {
-        print this.name + " makes a sound.";
-    }
-}
-
-class Dog extends Animal {
-    constructor(name) {
-        super.constructor(name);
-    }
-
-    speak() {
-        print this.name + " barks loudly!";
-    }
-}
-
-// Note: No 'new' keyword needed in your language!
-let myDog = Dog("Rex");
-myDog.speak();
-
-// 4. Reactive UI
-print "--- Launching UI ---";
-
-// Create reactive state holders
-let counterState = State(0);
-let textState = State("Type something...");
-
-// Build the declarative UI tree
-Window("My Custom Language UI", Modifier.background("lightblue").textColor("red")) {
-    Column(Modifier.padding(15.0)) {
-        Text("Welcome to my UI Framework!", Modifier.fontSize(24.0).textColor("blue"));
-
-        Row(Modifier.padding(10.0)) {
-            Button("Decrement") {
-                counterState.set(counterState.get() - 1);
+            Observe(themeState) {
+                Text("Current Theme: ${themeState.get()}");
             };
 
-            Observe(counterState) {
-                Text("Count: ${counterState.get()}", Modifier.fontSize(18.0));
-            };
-
-            Button("Increment") {
-                counterState.set(counterState.get() + 1);
-            };
-        };
-
-        Text("Reactivity Test:", Modifier.fontSize(18.0).textColor("gray"));
-        TextField(textState, Modifier.border("red"));
-
-        Observe(textState) {
-            Text("You typed: ${textState.get()}", Modifier.fontSize(14.0).textColor("green"));
+            // Let's generate a bunch of dummy fields to force the scrollbar to appear
+            Text("Extra Settings:", Modifier.padding(20.0));
+            TextField(dummyState);
+            TextField(dummyState);
+            TextField(dummyState);
+            TextField(dummyState);
+            TextField(dummyState);
+            TextField(dummyState);
+            TextField(dummyState);
+            TextField(dummyState);
         };
     };
 };

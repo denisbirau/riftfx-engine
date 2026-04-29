@@ -4,18 +4,18 @@ let tasks = State([]);
 let input = State("");
 
 Window("My To-Do List") {
-    Column(15) {
+    Column(Modifier.padding(15)) {
 
-        Text("Task Manager", 24, "black");
+        Text("Task Manager", Modifier.padding(24).textColor("black").fontSize(20));
 
         // 1. THE INPUT AREA
-        Row(10) {
+        Row(Modifier.padding(10)) {
             TextField(input);
 
             Button("Add Task") {
                 if (input.get() != "") {
                     let currentTasks = tasks.get();
-                    push(currentTasks, input.get()); // Add to the array
+                    currentTasks.push(input.get()); // Add to the array
 
                     tasks.set(currentTasks); // TRIGGER THE UI REDRAW!
                     input.set(""); // Clear the text field
@@ -27,22 +27,22 @@ Window("My To-Do List") {
         Observe(tasks) {
             let currentTasks = tasks.get();
 
-            if (len(currentTasks) == 0) {
-                Text("No tasks yet. You're all caught up!", 14, "gray");
+            if (currentTasks.len == 0) {
+                Text("No tasks yet. You're all caught up!", Modifier.padding(14).textColor("gray"));
             }
 
-            for (let i = 0; i < len(currentTasks); i = i + 1) {
+            for (let i = 0; i < currentTasks.len; i = i + 1) {
                 // VERY IMPORTANT: Capture the current index in a block-scoped variable
                 // so the Delete button's closure remembers the correct index!
                 let taskIndex = i;
                 let taskName = currentTasks[taskIndex];
 
-                Row(10) {
-                    Text("- " + taskName, 16, "#333333");
+                Row(Modifier.padding(10)) {
+                    Text("- " + taskName, Modifier.padding(16).textColor("#333333"));
 
                     Button("Delete") {
                         let tempTasks = tasks.get();
-                        removeAt(tempTasks, taskIndex);
+                        tempTasks.removeAt(taskIndex);
                         tasks.set(tempTasks); // Trigger redraw
                     };
                 };
