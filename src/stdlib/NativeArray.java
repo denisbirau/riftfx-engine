@@ -2,7 +2,6 @@ package stdlib;
 
 import interpreter.Callable;
 import interpreter.Interpreter;
-import interpreter.NativeObject;
 import scanner.Token;
 
 import java.util.List;
@@ -44,6 +43,17 @@ public class NativeArray implements NativeObject {
                         return null;
                     }
                     throw new RuntimeException("Index must be a number.");
+                }
+            };
+            case "indexOf" -> new Callable() {
+                @Override
+                public int arity() {
+                    return 1;
+                }
+
+                @Override
+                public Object call(List<Object> arguments, Interpreter interpreter) {
+                    return (double) elements.indexOf(arguments.getFirst());
                 }
             };
             default -> throw new RuntimeException("Undefined member on array: '" + member.lexeme() + "'.");

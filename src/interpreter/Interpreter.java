@@ -7,6 +7,7 @@ import scanner.Token;
 import scanner.TokenType;
 import error.RuntimeError;
 import stdlib.NativeArray;
+import stdlib.NativeObject;
 import stdlib.StandardLibrary;
 
 import java.util.*;

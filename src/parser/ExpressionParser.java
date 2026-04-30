@@ -284,7 +284,7 @@ public class ExpressionParser {
             if (tokenType == TokenType.ARROW) {
                 hasArrow = true;
                 break;
-            } else if (tokenType == TokenType.RIGHT_BRACE || tokenType == TokenType.SEMICOLON || tokenType == TokenType.EOF) {
+            } else if (tokenType != TokenType.IDENTIFIER && tokenType != TokenType.COMMA) {
                 break;
             }
             lookahead++;

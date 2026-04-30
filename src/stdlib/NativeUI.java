@@ -1,8 +1,12 @@
 package stdlib;
 
 import error.RuntimeError;
-import interpreter.NativeObject;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
@@ -10,10 +14,8 @@ import interpreter.Callable;
 import interpreter.Interpreter;
 import scanner.Token;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.util.*;
 
 public class NativeUI {
     public static <T> T getArgument(List<Object> arguments, int index, Class<T> tClass, T defaultValue) {
@@ -243,6 +245,75 @@ public class NativeUI {
         }
     }
 
+    public static class Grid extends AbstractUIContainer<GridPane> {
+        @Override
+        protected GridPane createContainer() {
+            return new GridPane();
+        }
+
+        @Override
+        protected void applySpacing(GridPane container, double spacing) {
+            container.setHgap(spacing);
+            container.setVgap(spacing);
+        }
+
+        @Override
+        protected double getDefaultSpacing() {
+            return 10.0;
+        }
+    }
+
+    public static class GridCell implements Callable {
+        @Override
+        public int arity() {
+            return 3;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("column", "row", "content");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount == arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            double col = getArgument(arguments, 0, Double.class, 0.0);
+            double row = getArgument(arguments, 1, Double.class, 0.0);
+            Callable lambda = getArgument(arguments, 2, Callable.class, null);
+
+            if (lambda == null) {
+                throw new RuntimeException("GridCell requires a content block.");
+            }
+
+            if (interpreter.renderer.isEmpty()) {
+                throw new RuntimeException("GridCell must be called inside an UI container.");
+            }
+
+            Object currentParent = interpreter.renderer.peekContainer();
+            if (!(currentParent instanceof GridPane)) {
+                throw new RuntimeException("GridCell must be placed directly inside a Grid.");
+            }
+
+            StackPane cellContainer = new StackPane();
+            GridPane.setColumnIndex(cellContainer, (int) col);
+            GridPane.setRowIndex(cellContainer, (int) row);
+
+            interpreter.renderer.addComponent(cellContainer);
+            interpreter.renderer.pushContainer(cellContainer);
+
+            try {
+                lambda.call(List.of(), interpreter);
+            } finally {
+                interpreter.renderer.popContainer();
+            }
+            return null;
+        }
+    }
+
     public static class Button implements Callable {
         @Override
         public int arity() {
@@ -311,45 +382,20 @@ public class NativeUI {
 
         @Override
         public Object getMember(Token member) {
-            if (member.lexeme().equals("get")) {
-                return new Callable() {
-                    @Override
-                    public int arity() {
-                        return 0;
-                    }
-
-                    @Override
-                    public Object call(List<Object> arguments, Interpreter interpreter) {
-                        return value;
-                    }
-                };
+            if (member.lexeme().equals("value")) {
+                return value;
             }
-            if (member.lexeme().equals("set")) {
-                return new Callable() {
-                    @Override
-                    public int arity() {
-                        return 1;
-                    }
-
-                    @Override
-                    public List<String> parameterNames() {
-                        return List.of("value");
-                    }
-
-                    @Override
-                    public Object call(List<Object> arguments, Interpreter interpreter) {
-                        value = arguments.getFirst();
-                        listeners.removeIf(uiListener -> !uiListener.update());
-                        return null;
-                    }
-                };
-            }
-            throw new RuntimeException("Undefined property: " + member.lexeme() + ".");
+            throw new RuntimeException("Undefined property: '" + member.lexeme() + "'.");
         }
 
         @Override
-        public void setMember(Token member, Object value) {
-            throw new RuntimeException("Cannot directly set properties on a State object. Use .set()");
+        public void setMember(Token member, Object newValue) {
+            if (member.lexeme().equals("value")) {
+                this.value = newValue;
+                listeners.removeIf(uiListener -> !uiListener.update());
+                return;
+            }
+            throw new RuntimeException("Undefined property: '" + member.lexeme() + "'.");
         }
     }
 
@@ -1018,6 +1064,793 @@ public class NativeUI {
             }
             interpreter.renderer.addComponent(comboBox);
 
+            return null;
+        }
+    }
+
+    public static class TextArea implements Callable {
+        @Override
+        public int arity() {
+            return 2;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("state", "modifier");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 1 && argCount <= arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            State state = getArgument(arguments, 0, State.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
+
+            if (state == null) {
+                throw new RuntimeException("TextArea requires a state object.");
+            }
+
+            javafx.scene.control.TextArea textArea = new javafx.scene.control.TextArea();
+            textArea.setText(state.value != null ? state.value.toString() : "");
+
+            if (modifierInstance != null) {
+                textArea.setStyle(modifierInstance.buildCss());
+            }
+
+            textArea.textProperty().addListener((_, _, newValue) -> {
+                if (!newValue.equals(state.value)) {
+                    state.value = newValue;
+                    state.listeners.removeIf(uiListener -> !uiListener.update());
+                }
+            });
+
+            state.listeners.add(() -> {
+                if (textArea.getParent() == null && textArea.getScene() == null) {
+                    return false;
+                }
+
+                String newStateValue = state.value != null ? state.value.toString() : "";
+                if (!textArea.getText().equals(newStateValue)) {
+                    textArea.setText(newStateValue);
+                }
+                return true;
+            });
+
+            if (interpreter.renderer.isEmpty()) {
+                throw new RuntimeException("TextArea must be called inside an UI container.");
+            }
+            interpreter.renderer.addComponent(textArea);
+            return null;
+        }
+    }
+
+    public static class ListView implements Callable {
+        @Override
+        public int arity() {
+            return 3;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("items", "modifier", "itemBuilder");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 2 && argCount <= arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            Object itemsArg = arguments.isEmpty() ? null : arguments.getFirst();
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
+            Callable lambda = getArgument(arguments, 2, Callable.class, null);
+
+            if (lambda == null) {
+                throw new RuntimeException("ListView requires an itemBuilder content block.");
+            }
+
+            State stateArg;
+            List<Object> itemsList = new ArrayList<>();
+
+            if (itemsArg instanceof State s) {
+                stateArg = s;
+                if (s.value instanceof NativeArray na) {
+                    itemsList.addAll(na.elements);
+                }
+            } else {
+                stateArg = null;
+                if (itemsArg instanceof NativeArray na) {
+                    itemsList.addAll(na.elements);
+                } else {
+                    throw new RuntimeException("ListView requires a NativeArray or a State containing a NativeArray.");
+                }
+            }
+
+            javafx.scene.control.ListView<Object> listView = new javafx.scene.control.ListView<>();
+            listView.getItems().addAll(itemsList);
+
+            if (modifierInstance != null) {
+                listView.setStyle(modifierInstance.buildCss());
+            }
+
+            listView.setCellFactory(_ -> new javafx.scene.control.ListCell<>() {
+                @Override
+                protected void updateItem(Object item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                        setGraphic(null);
+                    } else {
+                        StackPane cellContainer = new StackPane();
+                        StackPane.setAlignment(cellContainer, Pos.CENTER_LEFT);
+
+                        interpreter.renderer.pushContainer(cellContainer);
+                        try {
+                            lambda.call(List.of(item), interpreter);
+                            setGraphic(cellContainer);
+                        } catch (RuntimeException e) {
+                            if (e instanceof RuntimeError runtimeError) {
+                                interpreter.errorReporter.report("ListView cell rendering failed: " + runtimeError.getMessage(), runtimeError.getToken());
+                            } else {
+                                System.err.println("Fatal UI Error: " + e.getMessage());
+                            }
+                        } finally {
+                            interpreter.renderer.popContainer();
+                        }
+                    }
+                }
+            });
+
+            if (stateArg != null) {
+                stateArg.listeners.add(() -> {
+                    if (listView.getParent() == null && listView.getScene() == null) {
+                        return false;
+                    }
+                    List<Object> newItems = new ArrayList<>();
+                    if (stateArg.value instanceof NativeArray na) {
+                        newItems.addAll(na.elements);
+                    }
+                    listView.getItems().setAll(newItems);
+                    return true;
+                });
+            }
+
+            if (interpreter.renderer.isEmpty()) {
+                throw new RuntimeException("ListView must be called inside an UI container.");
+            }
+            interpreter.renderer.addComponent(listView);
+            VBox.setVgrow(listView, Priority.ALWAYS);
+            return null;
+        }
+    }
+
+    public static class ShowAlert implements Callable {
+        @Override
+        public int arity() {
+            return 3;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("type", "title", "message");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 2 && argCount <= arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            String typeString = getArgument(arguments, 0, String.class, "INFORMATION").toUpperCase();
+            String title = getArgument(arguments, 1, String.class, "Alert");
+            String message = getArgument(arguments, 2, String.class, "");
+
+            Alert.AlertType alertType = switch (typeString) {
+                case "ERROR" -> Alert.AlertType.ERROR;
+                case "WARNING" -> Alert.AlertType.WARNING;
+                case "CONFIRMATION" -> Alert.AlertType.CONFIRMATION;
+                default -> Alert.AlertType.INFORMATION;
+            };
+
+            Alert alert = new Alert(alertType);
+            alert.setTitle(title);
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+
+            Optional<ButtonType> result = alert.showAndWait();
+            return result.isPresent() && result.get() == ButtonType.OK;
+        }
+    }
+
+    public static class RadioButton implements Callable {
+        @Override
+        public int arity() {
+            return 4;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("text", "optionValue", "state", "modifier");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 3 && argCount <= arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            String text = getArgument(arguments, 0, String.class, "");
+            Object optionValue = getArgument(arguments, 1, Object.class, null);
+            State state = getArgument(arguments, 2, State.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 3, ModifierInstance.class, null);
+
+            if (state == null) {
+                throw new RuntimeException("RadioButton requires a state object.");
+            }
+
+            javafx.scene.control.RadioButton radioButton = new javafx.scene.control.RadioButton(text);
+            radioButton.setSelected(Objects.equals(state.value, optionValue));
+
+            if (modifierInstance != null) {
+                radioButton.setStyle(modifierInstance.buildCss());
+            }
+
+            radioButton.setOnAction(_ -> {
+                if (radioButton.isSelected()) {
+                    state.value = optionValue;
+                    state.listeners.removeIf(uiListener -> !uiListener.update());
+                }
+            });
+
+            state.listeners.add(() -> {
+                if (radioButton.getParent() == null && radioButton.getScene() == null) {
+                    return false;
+                }
+                boolean shouldBeSelected = Objects.equals(state.value, optionValue);
+                if (radioButton.isSelected() != shouldBeSelected) {
+                    radioButton.setSelected(shouldBeSelected);
+                }
+                return true;
+            });
+
+            if (interpreter.renderer.isEmpty()) {
+                throw new RuntimeException("RadioButton must be called inside an UI container.");
+            }
+            interpreter.renderer.addComponent(radioButton);
+            return null;
+        }
+    }
+
+    public static class DatePicker implements Callable {
+        @Override
+        public int arity() {
+            return 2;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("state", "modifier");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 1 && argCount <= arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            State state = getArgument(arguments, 0, State.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
+
+            if (state == null) {
+                throw new RuntimeException("DatePicker requires a state object.");
+            }
+
+            javafx.scene.control.DatePicker datePicker = new javafx.scene.control.DatePicker();
+
+            if (state.value instanceof NativeDate nativeDate) {
+                datePicker.setValue(nativeDate.date);
+            }
+
+            if (modifierInstance != null) {
+                datePicker.setStyle(modifierInstance.buildCss());
+            }
+
+            datePicker.valueProperty().addListener((_, _, newValue) -> {
+                if (newValue != null) {
+                    NativeDate nativeDate = new NativeDate(newValue);
+                    if (!(state.value instanceof NativeDate currentDate) || !currentDate.date.equals(newValue)) {
+                        state.value = nativeDate;
+                        state.listeners.removeIf(uiListener -> !uiListener.update());
+                    }
+                }
+            });
+
+            state.listeners.add(() -> {
+                if (datePicker.getParent() == null && datePicker.getScene() == null) {
+                    return false;
+                }
+                if (state.value instanceof NativeDate nativeDate) {
+                    if (!nativeDate.date.equals(datePicker.getValue())) {
+                        datePicker.setValue(nativeDate.date);
+                    }
+                }
+                return true;
+            });
+
+            if (interpreter.renderer.isEmpty()) {
+                throw new RuntimeException("DatePicker must be called inside an UI container.");
+            }
+            interpreter.renderer.addComponent(datePicker);
+            return null;
+        }
+    }
+
+    public static class NativeGraphicsContext implements NativeObject {
+        private final GraphicsContext graphicsContext;
+
+        public NativeGraphicsContext(GraphicsContext graphicsContext) {
+            this.graphicsContext = graphicsContext;
+        }
+
+        @Override
+        public Object getMember(Token member) {
+            return switch (member.lexeme()) {
+                case "setFill" -> new Callable() {
+                    @Override
+                    public int arity() {
+                        return 1;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        graphicsContext.setFill(javafx.scene.paint.Color.web(arguments.getFirst().toString()));
+                        return null;
+                    }
+                };
+                case "fillRect" -> new Callable() {
+                    @Override
+                    public int arity() {
+                        return 4;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        graphicsContext.fillRect((Double) arguments.get(0), (Double) arguments.get(1), (Double) arguments.get(2), (Double) arguments.get(3));
+                        return null;
+                    }
+                };
+                case "fillOval" -> new Callable() {
+                    @Override
+                    public int arity() {
+                        return 4;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        graphicsContext.fillOval((Double) arguments.get(0), (Double) arguments.get(1), (Double) arguments.get(2), (Double) arguments.get(3));
+                        return null;
+                    }
+                };
+                case "clearRect" -> new Callable() {
+                    @Override
+                    public int arity() {
+                        return 4;
+                    }
+
+                    @Override
+                    public Object call(List<Object> arguments, Interpreter interpreter) {
+                        graphicsContext.clearRect((Double) arguments.get(0), (Double) arguments.get(1), (Double) arguments.get(2), (Double) arguments.get(3));
+                        return null;
+                    }
+                };
+                default -> throw new RuntimeException("Undefined graphics method: '" + member.lexeme() + "'.");
+            };
+        }
+
+        @Override
+        public void setMember(Token member, Object value) {
+            throw new RuntimeException("Graphics context properties cannot be set directly");
+        }
+    }
+
+    public static class CanvasUI implements Callable {
+        @Override
+        public int arity() {
+            return 3;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("width", "height", "onDraw");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount == arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            double width = getArgument(arguments, 0, Double.class, 200.0);
+            double height = getArgument(arguments, 1, Double.class, 200.0);
+            Callable lambda = getArgument(arguments, 2, Callable.class, null);
+
+            if (lambda == null) {
+                throw new RuntimeException("Canvas requires a drawing lambda.");
+            }
+
+            Canvas canvas = new Canvas(width, height);
+            NativeGraphicsContext nativeGraphicsContext = new NativeGraphicsContext(canvas.getGraphicsContext2D());
+
+            lambda.call(List.of(nativeGraphicsContext), interpreter);
+
+            if (interpreter.renderer.isEmpty()) {
+                throw new RuntimeException("Canvas must be called inside an UI container.");
+            }
+            interpreter.renderer.addComponent(canvas);
+            return null;
+        }
+    }
+
+    public static class TabUI implements Callable {
+        @Override
+        public int arity() {
+            return 2;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("title", "content");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 1 && argCount <= arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            String title = getArgument(arguments, 0, String.class, "Tab");
+            Callable lambda = getArgument(arguments, 1, Callable.class, null);
+
+            if (lambda == null) {
+                throw new RuntimeException("Tab requires a content block.");
+            }
+
+            javafx.scene.control.Tab tab = new javafx.scene.control.Tab(title);
+            tab.setClosable(false);
+
+            VBox tabContent = new VBox();
+            tabContent.setSpacing(10);
+
+            VBox.setVgrow(tabContent, Priority.ALWAYS);
+            tab.setContent(tabContent);
+
+            interpreter.renderer.pushContainer(tabContent);
+            try {
+                lambda.call(List.of(), interpreter);
+            } finally {
+                interpreter.renderer.popContainer();
+            }
+            return tab;
+        }
+    }
+
+    public static class TabPaneUI implements Callable {
+        @Override
+        public int arity() {
+            return 2;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("tabs", "modifier");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 1 && argCount <= arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            Object tabsArgument = getArgument(arguments, 0, Object.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
+
+            javafx.scene.control.TabPane tabPane = new javafx.scene.control.TabPane();
+
+            if (modifierInstance != null) {
+                tabPane.setStyle(modifierInstance.buildCss());
+            }
+
+            VBox.setVgrow(tabPane, Priority.ALWAYS);
+
+            if (tabsArgument instanceof NativeArray nativeArray) {
+                for (Object item : nativeArray.elements) {
+                    if (item instanceof  javafx.scene.control.Tab t) {
+                        tabPane.getTabs().add(t);
+                    } else {
+                        throw new RuntimeException("TabPane array must only contain Tab objects.");
+                    }
+                }
+            } else {
+                throw new RuntimeException("TabPane requires an array of Tabs.");
+            }
+
+            if (interpreter.renderer.isEmpty()) {
+                throw new RuntimeException("TabPane must be called inside an UI container.");
+            }
+            interpreter.renderer.addComponent(tabPane);
+            return null;
+        }
+    }
+
+    public static class TitledPaneUI implements Callable {
+        @Override
+        public int arity() {
+            return 3;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("title", "modifier", "content");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 2 && argCount <= arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            String title = getArgument(arguments, 0, String.class, "Group");
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
+            Callable lambda = getArgument(arguments, 2, Callable.class, null);
+
+            if (lambda == null) {
+                throw new RuntimeException("TitledPane requires a content block.");
+            }
+
+            VBox paneContent = new VBox();
+            paneContent.setSpacing(10);
+
+            paneContent.setStyle("-fx-padding: 10px;");
+
+            interpreter.renderer.pushContainer(paneContent);
+            try {
+                lambda.call(List.of(), interpreter);
+            } finally {
+                interpreter.renderer.popContainer();
+            }
+
+            javafx.scene.control.TitledPane titledPane = new javafx.scene.control.TitledPane(title, paneContent);
+            titledPane.setExpanded(true);
+            titledPane.setCollapsible(true);
+
+            if (modifierInstance != null) {
+                titledPane.setStyle(titledPane.getStyle() + modifierInstance.buildCss());
+            }
+
+            if (interpreter.renderer.isEmpty()) {
+                throw new RuntimeException("TitledPane must be called inside an UI container.");
+            }
+            interpreter.renderer.addComponent(titledPane);
+            return null;
+        }
+    }
+
+    public static class MenuItemUI implements Callable {
+        @Override
+        public int arity() {
+            return 2;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("title", "onClick");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount == arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            String title = getArgument(arguments, 0, String.class, "Item");
+            Callable lambda = getArgument(arguments, 1, Callable.class, null);
+
+            if (lambda == null) {
+                throw new RuntimeException("MenuItem requires an onClick block.");
+            }
+
+            javafx.scene.control.MenuItem menuItem = new javafx.scene.control.MenuItem(title);
+            menuItem.setOnAction(_ -> {
+                try {
+                    lambda.call(List.of(), interpreter);
+                } catch (RuntimeException e) {
+                    if (e instanceof RuntimeError runtimeError) {
+                        interpreter.errorReporter.report("Menu Action Error: " + runtimeError.getMessage(), runtimeError.getToken());
+                    } else {
+                        System.err.println("Fatal UI Error: " + e.getMessage());
+                    }
+                }
+            });
+
+            return menuItem;
+        }
+    }
+
+    public static class MenuUI implements Callable {
+        @Override
+        public int arity() {
+            return 2;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("title", "items");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount == arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            String title = getArgument(arguments, 0, String.class, "Menu");
+            Object itemsArgument = getArgument(arguments, 1, Object.class, null);
+
+            javafx.scene.control.Menu menu = new javafx.scene.control.Menu(title);
+
+            if (itemsArgument instanceof NativeArray nativeArray) {
+                for (Object item : nativeArray.elements) {
+                    if (item instanceof javafx.scene.control.MenuItem mi) {
+                        menu.getItems().add(mi);
+                    } else {
+                        throw new RuntimeException("Menu array must ony contain MenuItem objects.");
+                    }
+                }
+            } else {
+                throw new RuntimeException("Menu requires an array of MenuItems.");
+            }
+            return menu;
+        }
+    }
+
+    public static class MenuBarUI implements Callable {
+        @Override
+        public int arity() {
+            return 2;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("menus", "modifier");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 1 && argCount <= arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            Object menusArgument = getArgument(arguments, 0, Object.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
+
+            javafx.scene.control.MenuBar menuBar = new javafx.scene.control.MenuBar();
+
+            if (modifierInstance != null) {
+                menuBar.setStyle(modifierInstance.buildCss());
+            }
+
+            if (menusArgument instanceof NativeArray nativeArray) {
+                for (Object item : nativeArray.elements) {
+                    if (item instanceof javafx.scene.control.Menu m) {
+                        menuBar.getMenus().add(m);
+                    } else {
+                        throw new RuntimeException("MenuBar array must only contain Menu objects.");
+                    }
+                }
+            } else {
+                throw new RuntimeException("MenuBar requires an array of Menus.");
+            }
+
+            if (interpreter.renderer.isEmpty()) {
+                throw new RuntimeException("MenuBar must be called inside an UI container.");
+            }
+            interpreter.renderer.addComponent(menuBar);
+            return null;
+        }
+    }
+
+    public static class FileChooserUI implements Callable {
+        @Override
+        public int arity() {
+            return 1;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("title");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount <= arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            String title = getArgument(arguments, 0, String.class, "Select File");
+
+            javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+            fileChooser.setTitle(title);
+
+            File selectedFile = fileChooser.showOpenDialog(null);
+            if (selectedFile != null) {
+                return selectedFile.getAbsolutePath();
+            }
+            return null; // User cancelled
+        }
+    }
+
+    public static class ProgressIndicatorUI implements Callable {
+        @Override
+        public int arity() {
+            return 2;
+        }
+
+        @Override
+        public List<String> parameterNames() {
+            return List.of("state", "modifier");
+        }
+
+        @Override
+        public boolean acceptsArity(int argCount) {
+            return argCount >= 1 && argCount <= arity();
+        }
+
+        @Override
+        public Object call(List<Object> arguments, Interpreter interpreter) {
+            State state = getArgument(arguments, 0, State.class, null);
+            ModifierInstance modifierInstance = getArgument(arguments, 1, ModifierInstance.class, null);
+
+            if (state == null) {
+                throw new RuntimeException("ProgressIndicator requires a state object.");
+            }
+
+            javafx.scene.control.ProgressIndicator progressIndicator = new javafx.scene.control.ProgressIndicator();
+            progressIndicator.setProgress(state.value instanceof Double ? (Double) state.value : -1.0); // -1.0 = indeterminate spinning animation
+
+            if (modifierInstance != null) {
+                progressIndicator.setStyle(modifierInstance.buildCss());
+            }
+
+            state.listeners.add(() -> {
+                if (progressIndicator.getParent() == null && progressIndicator.getScene() == null) {
+                    return false;
+                }
+                double newStateValue = state.value instanceof Double ? (Double) state.value : -1.0;
+                if (progressIndicator.getProgress() != newStateValue) {
+                    progressIndicator.setProgress(newStateValue);
+                }
+                return true;
+            });
+
+            if (interpreter.renderer.isEmpty()) {
+                throw new RuntimeException("ProgressIndicator must be called inside an UI container.");
+            }
+            interpreter.renderer.addComponent(progressIndicator);
             return null;
         }
     }

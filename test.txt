@@ -1,21 +1,47 @@
-def CustomCounter(initialValue) {
-    let count = State(initialValue);
+let currentFilePath = State("");
+let fileContent = State("");
+let statusMessage = State("Ready.");
 
-    Observe(count) {
-        Row(Modifier.padding(5)) {
-            Text("Current Count: ");
-            Text(count.get());
-
-            Button("Increment", Modifier.padding(10)) {
-                count.set(count.get() + 1);
-            };
-        };
-    };
-}
-
-Window("Multi-Counter") {
+Window("NanoEdit Studio", Modifier.padding(0)) {
     Column {
-        CustomCounter(0);
-        CustomCounter(100);
-    };
-};
+
+        // Native App Menu
+        MenuBar([
+            Menu("File", [
+                MenuItem("Open...") {
+                    let path = FileChooser("Open Text File");
+                    if (path != null) {
+                        currentFilePath.value = path;
+
+                        // Actually read the file from the hard drive!
+                        fileContent.value = File.readText(path);
+                        statusMessage.value = "Opened " + path;
+                    }
+                },
+                MenuItem("Save") {
+                    let path = currentFilePath.value;
+                    if (path != "") {
+                        // Actually save the file to the hard drive!
+                        File.writeText(path, fileContent.value);
+                        statusMessage.value = "Saved successfully!";
+                        ShowAlert("INFORMATION", "Saved", "File saved successfully!");
+                    } else {
+                        ShowAlert("WARNING", "Error", "No file is currently open to save. Use 'Save As...' (if implemented).");
+                    }
+                }
+            ])
+        ]);
+
+        // Editor Area
+        Column(Modifier.padding(10)) {
+            TextArea(fileContent);
+
+            Spacer();
+
+            // Status bar
+            Observe(statusMessage) {
+                Text(statusMessage.value, Modifier.textColor("gray").fontSize(12));
+            }
+        }
+    }
+}

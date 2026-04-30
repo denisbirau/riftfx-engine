@@ -2,7 +2,6 @@ package stdlib;
 
 import interpreter.Callable;
 import interpreter.Interpreter;
-import interpreter.NativeObject;
 import scanner.Token;
 
 import java.util.List;

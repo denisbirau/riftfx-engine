@@ -56,7 +56,7 @@ public class Parser {
         if (stream.match(TokenType.EQUAL)) {
             initializer = expressionParser.parseExpression();
         }
-        stream.consume(TokenType.SEMICOLON, "Expect ';' after statement.");
+        consumeStatementEnd("Expect ';' after statement.");
         return new Stmt.Let(identifier, initializer);
     }
 
@@ -124,7 +124,7 @@ public class Parser {
 
     private Stmt parsePrintStatement() {
         Expr expression = expressionParser.parseExpression();
-        stream.consume(TokenType.SEMICOLON, "Expect ';' after print statement.");
+        consumeStatementEnd("Expect ';' after print statement.");
         return new Stmt.Print(expression);
     }
 
@@ -199,7 +199,7 @@ public class Parser {
 
     private Stmt parseBreakStatement() {
         Token keyword = stream.previous();
-        stream.consume(TokenType.SEMICOLON, "Expect ';' after statement.");
+        consumeStatementEnd("Expect ';' after statement.");
         return new Stmt.Break(keyword);
     }
 
@@ -209,13 +209,13 @@ public class Parser {
         if (!stream.check(TokenType.SEMICOLON)) {
             value = expressionParser.parseExpression();
         }
-        stream.consume(TokenType.SEMICOLON, "Expect ';' after statement.");
+        consumeStatementEnd("Expect ';' after statement.");
         return new Stmt.Return(keyword, value);
     }
 
     private Stmt parseExpressionStatement() {
         Expr expression = expressionParser.parseExpression();
-        stream.consume(TokenType.SEMICOLON, "Expect ';' after statement.");
+        consumeStatementEnd("Expect ';' after statement.");
         return new Stmt.Expression(expression);
     }
 
@@ -232,6 +232,14 @@ public class Parser {
             if (stream.check(TokenType.DEF)) break;
             if (stream.check(TokenType.RETURN)) break;
             stream.advance();
+        }
+    }
+
+    private void consumeStatementEnd(String errorMessage) {
+        if (stream.previous().type() == TokenType.RIGHT_BRACE) {
+            stream.match(TokenType.SEMICOLON);
+        } else {
+            stream.consume(TokenType.SEMICOLON, errorMessage);
         }
     }
 }
