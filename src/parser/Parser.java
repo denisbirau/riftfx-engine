@@ -140,7 +140,7 @@ public class Parser {
     private Stmt parseIfStatement() {
         stream.consume(TokenType.LEFT_PARENTHESIS, "Expect '(' after 'if' keyword.");
         Expr condition = expressionParser.parseExpression();
-        stream.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after expression.");
+        stream.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after subExpression.");
 
         Stmt thenStatement = parseStatement();
         Stmt elseStatement = null;
@@ -153,7 +153,7 @@ public class Parser {
     private Stmt parseWhileStatement() {
         stream.consume(TokenType.LEFT_PARENTHESIS, "Expect '(' after 'while' keyword.");
         Expr condition = expressionParser.parseExpression();
-        stream.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after expression.");
+        stream.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after subExpression.");
         Stmt statement = parseStatement();
         return new Stmt.While(condition, statement);
     }
@@ -176,14 +176,14 @@ public class Parser {
         if (!stream.check(TokenType.SEMICOLON)) {
             condition = expressionParser.parseExpression();
         }
-        stream.consume(TokenType.SEMICOLON, "Expect ';' after expression.");
+        stream.consume(TokenType.SEMICOLON, "Expect ';' after subExpression.");
 
         // Incrementing
         Expr increment = null;
         if (!stream.check(TokenType.RIGHT_PARENTHESIS)) {
             increment = expressionParser.parseExpression();
         }
-        stream.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after expression.");
+        stream.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after subExpression.");
 
         // Body
         Stmt body = parseStatement();

@@ -118,7 +118,7 @@ public class ExpressionParser {
 
         PrefixParseFn prefixFn = rules.get(stream.previous().type()).prefixParseFn;
         if (prefixFn == null) {
-            throw new ParseError("Expect expression.", stream.previous());
+            throw new ParseError("Expect subExpression.", stream.previous());
         }
 
         Expr leftExpression = prefixFn.parse();
@@ -174,7 +174,7 @@ public class ExpressionParser {
 
     private Expr parseGroupExpression() {
         Expr innerExpression = parseExpression();
-        stream.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after expression.");
+        stream.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after subExpression.");
         return new Expr.Group(innerExpression);
     }
 
@@ -185,7 +185,7 @@ public class ExpressionParser {
                 elements.add(parseExpression());
             } while (stream.match(TokenType.COMMA));
         }
-        stream.consume(TokenType.RIGHT_BRACKET, "Expect ']' after array elements.");
+        stream.consume(TokenType.RIGHT_BRACKET, "Expect ']' after sequenceExpression elements.");
         return new Expr.ArrayDefinition(elements);
     }
 

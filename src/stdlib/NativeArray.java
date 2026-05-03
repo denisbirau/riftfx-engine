@@ -6,13 +6,7 @@ import scanner.Token;
 
 import java.util.List;
 
-public class NativeArray implements NativeObject {
-    public final List<Object> elements;
-
-    public NativeArray(List<Object> elements) {
-        this.elements = elements;
-    }
-
+public record NativeArray(List<Object> elements) implements NativeObject {
     @Override
     public Object getMember(Token member) {
         return switch (member.lexeme()) {
@@ -56,13 +50,13 @@ public class NativeArray implements NativeObject {
                     return (double) elements.indexOf(arguments.getFirst());
                 }
             };
-            default -> throw new RuntimeException("Undefined member on array: '" + member.lexeme() + "'.");
+            default -> throw new RuntimeException("Undefined member on sequenceExpression: '" + member.lexeme() + "'.");
         };
     }
 
     @Override
     public void setMember(Token member, Object value) {
-        throw new RuntimeException("Can not add new properties to an array.");
+        throw new RuntimeException("Can not add new properties to an sequenceExpression.");
     }
 
     @Override

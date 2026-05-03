@@ -192,7 +192,7 @@ public class Resolver {
     }
 
     private void resolveUnaryExpression(Expr.Unary expr) {
-        resolve(expr.expression());
+        resolve(expr.subExpression());
     }
 
     private void resolveBinaryExpression(Expr.Binary expr) {
@@ -219,7 +219,7 @@ public class Resolver {
 
     private void resolveAssignmentExpression(Expr.Assignment expr) {
         resolve(expr.expressionToAssign());
-        resolveLocal(expr, expr.identifierToken());
+        resolveLocal(expr, expr.assigneeIdentifierToken());
     }
 
     private void resolveCallExpression(Expr.Call expr) {
@@ -261,12 +261,12 @@ public class Resolver {
     }
 
     private void resolveSubscriptGetExpression(Expr.SubscriptGet expr) {
-        resolve(expr.array());
+        resolve(expr.sequenceExpression());
         resolve(expr.indexExpression());
     }
 
     private void resolveSubscriptSetExpression(Expr.SubscriptSet expr) {
-        resolve(expr.array());
+        resolve(expr.sequenceExpression());
         resolve(expr.indexExpression());
         resolve(expr.expressionToAssign());
     }

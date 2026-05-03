@@ -1,0 +1,10 @@
+package stdlib.ui.controls;
+
+import javafx.scene.control.TextArea;
+
+public class TextAreaUI extends AbstractTextInputUI<TextArea> {
+    @Override
+    protected TextArea createNode() {
+        return new TextArea();
+    }
+}

@@ -25,7 +25,7 @@ public sealed interface Expr permits
 {
     record Literal(Object value) implements Expr { }
 
-    record Unary(Token operator, Expr expression) implements Expr { }
+    record Unary(Token operator, Expr subExpression) implements Expr { }
 
     record Binary(Expr leftExpression, Token operator, Expr rightExpression) implements Expr { }
 
@@ -39,7 +39,7 @@ public sealed interface Expr permits
         }
     }
 
-    record Assignment(Token identifierToken, Expr expressionToAssign, Resolution resolution) implements Expr {
+    record Assignment(Token assigneeIdentifierToken, Expr expressionToAssign, Resolution resolution) implements Expr {
         public Assignment(Token identifierToken, Expr expressionToAssign) {
             this(identifierToken, expressionToAssign, new Resolution());
         }
@@ -67,9 +67,9 @@ public sealed interface Expr permits
 
     record ArrayDefinition(List<Expr> elements) implements Expr { }
 
-    record SubscriptGet(Expr array, Token leftBracket, Expr indexExpression) implements Expr { }
+    record SubscriptGet(Expr sequenceExpression, Token leftBracket, Expr indexExpression) implements Expr { }
 
-    record SubscriptSet(Expr array, Token leftBracket, Expr indexExpression, Expr expressionToAssign) implements Expr { }
+    record SubscriptSet(Expr sequenceExpression, Token leftBracket, Expr indexExpression, Expr expressionToAssign) implements Expr { }
 
     record Lambda(List<Token> parameters, List<Stmt> lambdaBody) implements Expr { }
 }

@@ -31,7 +31,7 @@ class Class implements Callable {
 
     @Override
     public int arity() {
-        Function constructor = getMethod("constructor");
+        var constructor = getMethod("constructor");
         if (constructor == null)
             return 0;
         return constructor.arity();
@@ -39,7 +39,7 @@ class Class implements Callable {
 
     @Override
     public List<String> parameterNames() {
-        Function constructor = getMethod("constructor");
+        var constructor = getMethod("constructor");
         if (constructor == null) {
             return List.of();
         }
@@ -48,8 +48,8 @@ class Class implements Callable {
 
     @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
-        Instance instance = new Instance(this);
-        Function constructor = getMethod("constructor");
+        var instance = new Instance(this);
+        var constructor = getMethod("constructor");
         if (constructor != null) {
             constructor.bindInstance(instance).call(arguments, interpreter);
         }

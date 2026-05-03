@@ -21,14 +21,9 @@ class Function implements Callable {
     }
 
     Function bindInstance(Instance instance) {
-        Environment environment = new Environment(this.environment);
+        var environment = new Environment(this.environment);
         environment.define("this", instance);
         return new Function(name, parameters, body, environment, isConstructor);
-    }
-
-    @Override
-    public String toString() {
-        return name != null ? "<fn " + name + ">" : "<fn lambda>";
     }
 
     @Override
@@ -43,12 +38,12 @@ class Function implements Callable {
 
     @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
-        Environment newEnvironment = new Environment(this.environment);
+        var newEnvironment = new Environment(this.environment);
         for (var i = 0; i < arguments.size(); i++) {
             newEnvironment.define(parameters.get(i).lexeme(), arguments.get(i));
         }
 
-        Environment previousEnvironment = interpreter.currentEnvironment;
+        var previousEnvironment = interpreter.currentEnvironment;
         interpreter.currentEnvironment = newEnvironment;
 
         try {

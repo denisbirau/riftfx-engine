@@ -33,24 +33,24 @@ class Environment {
     }
 
     // Global Lookup
-    Object getValue(Token identifierToken) {
+    Object getGlobal(Token identifierToken) {
         if (identifiers.containsKey(identifierToken.lexeme())) {
             return identifiers.get(identifierToken.lexeme());
         }
         if (enclosingEnvironment != null) {
-            return enclosingEnvironment.getValue(identifierToken);
+            return enclosingEnvironment.getGlobal(identifierToken);
         }
         throw new RuntimeError("'" + identifierToken + "' is undefined.", identifierToken);
     }
 
     // Global Update
-    void updateValue(Token identifierToken, Object newValue) {
+    void updateGlobal(Token identifierToken, Object newValue) {
         if (identifiers.containsKey(identifierToken.lexeme())) {
             identifiers.put(identifierToken.lexeme(), newValue);
             return;
         }
         if (enclosingEnvironment != null) {
-            enclosingEnvironment.updateValue(identifierToken, newValue);
+            enclosingEnvironment.updateGlobal(identifierToken, newValue);
             return;
         }
         throw new RuntimeError("'" + identifierToken.lexeme() + "' is undefined.", identifierToken);
@@ -58,7 +58,7 @@ class Environment {
 
     private Environment ancestor(int distance) {
         Environment environment = this;
-        for (int i = 0; i < distance; i++) {
+        for (var i = 0; i < distance; i++) {
             if (environment != null) {
                 environment = environment.enclosingEnvironment;
             }

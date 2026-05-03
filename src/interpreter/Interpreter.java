@@ -13,7 +13,7 @@ import stdlib.StandardLibrary;
 import java.util.*;
 
 public class Interpreter {
-    Environment globalEnvironment = new Environment();
+    private final Environment globalEnvironment = new Environment();
     Environment currentEnvironment = globalEnvironment;
 
     private final List<Stmt> statements;
@@ -80,7 +80,7 @@ public class Interpreter {
     }
 
     private void executeLetStatement(Stmt.Let stmt) {
-        var value = (stmt.initializer() != null) ? evaluate(stmt.initializer()) : null;
+        final var value = (stmt.initializer() != null) ? evaluate(stmt.initializer()) : null;
         currentEnvironment.define(stmt.variableName().lexeme(), value);
     }
 
@@ -89,7 +89,7 @@ public class Interpreter {
     }
 
     private void executeBlockStatement(Stmt.Block stmt) {
-        var previousEnvironment = currentEnvironment;
+        final var previousEnvironment = currentEnvironment;
         currentEnvironment = new Environment(currentEnvironment);
         try {
             for (var subStmt : stmt.subStatements()) {
@@ -151,23 +151,25 @@ public class Interpreter {
             currentEnvironment = new Environment(currentEnvironment);
             currentEnvironment.define("super", superclass);
         }
-        Map<String, Function> methods = new HashMap<>();
-        for (var method : stmt.methods()) {
-            boolean isConstructor = method.name().lexeme().equals("constructor");
-            methods.put(method.name().lexeme(), new Function(
-                    method.name().lexeme(),
-                    method.parameters(),
-                    method.body(),
-                    currentEnvironment,
-                    isConstructor
-            ));
-        }
-        var myClass = new Class(stmt.className().lexeme(), methods, (Class) superclass);
-        if (superclass != null) {
-            currentEnvironment = currentEnvironment.enclosingEnvironment;
-        }
-        if (currentEnvironment != null) {
-            currentEnvironment.updateValue(stmt.className(), myClass);
+        try {
+            var methods = new HashMap<String, Function>();
+            for (var method : stmt.methods()) {
+                boolean isConstructor = method.name().lexeme().equals("constructor");
+                methods.put(method.name().lexeme(), new Function(
+                        method.name().lexeme(),
+                        method.parameters(),
+                        method.body(),
+                        currentEnvironment,
+                        isConstructor
+                ));
+            }
+            var myClass = new Class(stmt.className().lexeme(), methods, (Class) superclass);
+            (superclass != null ? currentEnvironment.enclosingEnvironment : currentEnvironment)
+                    .updateGlobal(stmt.className(), myClass);
+        } finally {
+            if (superclass != null) {
+                currentEnvironment = currentEnvironment.enclosingEnvironment;
+            }
         }
     }
 
@@ -177,7 +179,7 @@ public class Interpreter {
     }
 
     private Object evaluateUnaryExpression(Expr.Unary expr) {
-        var value = evaluate(expr.expression());
+        var value = evaluate(expr.subExpression());
         return switch (expr.operator().type()) {
             case TokenType.MINUS -> -asDouble(value, expr.operator());
             case TokenType.NOT -> !isTrue(value);
@@ -239,7 +241,7 @@ public class Interpreter {
             case TokenType.NOT_EQUAL -> !Objects.equals(leftValue, evaluate(expr.rightExpression()));
             case TokenType.AND -> !isTrue(leftValue) ? leftValue : evaluate(expr.rightExpression());
             case TokenType.OR -> isTrue(leftValue) ? leftValue : evaluate(expr.rightExpression());
-            default -> null; // Unreachable
+            default -> throw new IllegalStateException("Unexpected binary operator: " + expr.operator().type());
         };
     }
 
@@ -255,18 +257,18 @@ public class Interpreter {
         if (expr.resolution().distance != null) {
             return currentEnvironment.getAt(expr.identifierToken().lexeme(), expr.resolution().distance);
         } else {
-            return globalEnvironment.getValue(expr.identifierToken());
+            return globalEnvironment.getGlobal(expr.identifierToken());
         }
     }
 
     private Object evaluateAssignmentExpression(Expr.Assignment expr) {
-        var value = evaluate(expr.expressionToAssign());
+        var valueToAssign = evaluate(expr.expressionToAssign());
         if (expr.resolution().distance != null) {
-            currentEnvironment.updateAt(expr.identifierToken().lexeme(), expr.resolution().distance, value);
+            currentEnvironment.updateAt(expr.assigneeIdentifierToken().lexeme(), expr.resolution().distance, valueToAssign);
         } else {
-            globalEnvironment.updateValue(expr.identifierToken(), value);
+            globalEnvironment.updateGlobal(expr.assigneeIdentifierToken(), valueToAssign);
         }
-        return value;
+        return valueToAssign;
     }
 
     private Object evaluateCallExpression(Expr.Call expr) {
@@ -274,37 +276,48 @@ public class Interpreter {
         if (!(callee instanceof Callable callable)) {
             throw new RuntimeError("Only functions or classes can be called.", expr.leftParenthesis());
         }
-
         if (!callable.acceptsArity(expr.arguments().size())) {
             throw new RuntimeError("Invalid number of arguments. Expected " + callable.arity() + " but got " + expr.arguments().size() + ".", expr.leftParenthesis());
         }
 
-        List<Object> arguments = new ArrayList<>();
-        boolean[] isFilled = new boolean[callable.arity()]; // Tracks filled parameter slots
-        for (int i = 0; i < callable.arity(); i++) {
+        var arguments = resolveArguments(callable, expr);
+
+        try {
+            return callable.call(arguments, this);
+        } catch (RuntimeError error) {
+            throw error;
+        } catch (RuntimeException error) {
+            throw new RuntimeError(error.getMessage(), expr.leftParenthesis());
+        }
+    }
+
+    private List<Object> resolveArguments(Callable callable, Expr.Call expr) {
+        var arguments = new ArrayList<>();
+        var isFilled = new boolean[callable.arity()]; // Tracks filled parameter slots
+        for (var i = 0; i < callable.arity(); i++) {
             arguments.add(null);
         }
 
-        int positionalIndex = 0;
-        List<String> paramNames = callable.parameterNames();
-        boolean namedArgumentSeen = false;
+        var positionalIndex = 0;
+        var parameterNames = callable.parameterNames();
+        var namedArgumentSeen = false;
 
-        for (int i = 0; i < expr.arguments().size(); i++) {
-            Expr.Argument arg = expr.arguments().get(i);
-            Object value = evaluate(arg.value());
+        for (var i = 0; i < expr.arguments().size(); i++) {
+            var currentArgument = expr.arguments().get(i);
+            var currentValue = evaluate(currentArgument.value());
 
             int targetIndex;
 
-            if (arg.nameToken() != null) {
+            if (currentArgument.nameToken() != null) {
                 // 1. Named Argument
                 namedArgumentSeen = true;
-                targetIndex = paramNames.indexOf(arg.nameToken().lexeme());
+                targetIndex = parameterNames.indexOf(currentArgument.nameToken().lexeme());
                 if (targetIndex == -1) {
-                    throw new RuntimeError("No parameter named '" + arg.nameToken().lexeme() + "' found.", arg.nameToken());
+                    throw new RuntimeError("No parameter named '" + currentArgument.nameToken().lexeme() + "' found.", currentArgument.nameToken());
                 }
             } else {
                 // 2. Positional Argument / Trailing Lambda
-                boolean isTrailingLambda = (i == expr.arguments().size() - 1) && (arg.value() instanceof Expr.Lambda);
+                var isTrailingLambda = (i == expr.arguments().size() - 1) && (currentArgument.value() instanceof Expr.Lambda);
 
                 if (isTrailingLambda) {
                     // Trailing lambdas always bind to the LAST parameter
@@ -321,28 +334,21 @@ public class Interpreter {
                 }
             }
 
-            // --- THE COLLISION DETECTOR ---
+            // Detect collisions
             if (isFilled[targetIndex]) {
-                Token errToken = arg.nameToken() != null ? arg.nameToken() : expr.leftParenthesis();
-                String collisionName = paramNames.size() > targetIndex ? paramNames.get(targetIndex) : "index " + targetIndex;
-                throw new RuntimeError("Multiple values passed for parameter '" + collisionName + "'.", errToken);
+                var errorToken = currentArgument.nameToken() != null ? currentArgument.nameToken() : expr.leftParenthesis();
+                var collisionName = parameterNames.size() > targetIndex ? parameterNames.get(targetIndex) : "index " + targetIndex;
+                throw new RuntimeError("Multiple values passed for parameter '" + collisionName + "'.", errorToken);
             }
 
-            arguments.set(targetIndex, value);
+            arguments.set(targetIndex, currentValue);
             isFilled[targetIndex] = true;
         }
-
-        try {
-            return callable.call(arguments, this);
-        } catch (RuntimeError error) {
-            throw error;
-        } catch (RuntimeException error) {
-            throw new RuntimeError(error.getMessage(), expr.leftParenthesis());
-        }
+        return arguments;
     }
 
     private Object evaluateGetExpression(Expr.GetMember expr) {
-        Object callee = evaluate(expr.objectExpression());
+        var callee = evaluate(expr.objectExpression());
         if (callee instanceof Instance instance) {
             return instance.get(expr.memberIdentifier());
         }
@@ -390,15 +396,15 @@ public class Interpreter {
     }
 
     private Object evaluateSetExpression(Expr.SetMember expr) {
-        Object callee = evaluate(expr.objectExpression());
-        Object newValue = evaluate(expr.expressionToAssign());
+        var callee = evaluate(expr.objectExpression());
+        var newValue = evaluate(expr.expressionToAssign());
         if (callee instanceof Instance instance) {
             instance.set(expr.memberIdentifier(), newValue);
             return newValue;
         }
-        if (callee instanceof NativeObject nativeObj) {
+        if (callee instanceof NativeObject nativeObject) {
             try {
-                nativeObj.setMember(expr.memberIdentifier(), newValue);
+                nativeObject.setMember(expr.memberIdentifier(), newValue);
                 return newValue;
             } catch (RuntimeException e) {
                 throw new RuntimeError(e.getMessage(), expr.memberIdentifier());
@@ -422,21 +428,21 @@ public class Interpreter {
     }
 
     private Object evaluateArrayDefinitionExpression(Expr.ArrayDefinition expr) {
-        List<Object> elements = new ArrayList<>();
-        for (Expr el : expr.elements()) {
-            elements.add(evaluate(el));
+        var elements = new ArrayList<>();
+        for (var element : expr.elements()) {
+            elements.add(evaluate(element));
         }
         return new NativeArray(elements);
     }
 
     private Object evaluateSubscriptGetExpression(Expr.SubscriptGet expr) {
-        Object array = evaluate(expr.array());
-        Object index = evaluate(expr.indexExpression());
-        if (array instanceof NativeArray nativeArray && index instanceof Double d) {
-            return nativeArray.elements.get(d.intValue());
+        var array = evaluate(expr.sequenceExpression());
+        var index = evaluate(expr.indexExpression());
+        if (array instanceof NativeArray(List<Object> elements) && index instanceof Double d) {
+            return elements.get(d.intValue());
         }
         if (array instanceof String str && index instanceof Double d) {
-            int i = d.intValue();
+            var i = d.intValue();
             if (i < 0 || i >= str.length()) {
                 throw new error.RuntimeError("String index out of bounds.", expr.leftBracket());
             }
@@ -446,11 +452,11 @@ public class Interpreter {
     }
 
     private Object evaluateSubscriptSetExpression(Expr.SubscriptSet expr) {
-        Object array = evaluate(expr.array());
-        Object index = evaluate(expr.indexExpression());
-        Object value = evaluate(expr.expressionToAssign());
-        if (array instanceof NativeArray nativeArray && index instanceof Double d) {
-            nativeArray.elements.set(d.intValue(), value);
+        var array = evaluate(expr.sequenceExpression());
+        var index = evaluate(expr.indexExpression());
+        var value = evaluate(expr.expressionToAssign());
+        if (array instanceof NativeArray(List<Object> elements) && index instanceof Double d) {
+            elements.set(d.intValue(), value);
             return value;
         }
         throw new RuntimeError("Only arrays can be sub scripted.", expr.leftBracket());
@@ -479,7 +485,7 @@ public class Interpreter {
             return "null";
         }
         if (value instanceof Double) {
-            String number = value.toString();
+            var number = value.toString();
             if (number.endsWith(".0")) {
                 number = number.substring(0, number.length() - 2);
             }

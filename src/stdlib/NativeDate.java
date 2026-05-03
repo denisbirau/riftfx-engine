@@ -9,13 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-public class NativeDate implements NativeObject {
-    public final LocalDate date;
-
-    public NativeDate(LocalDate date) {
-        this.date = date;
-    }
-
+public record NativeDate(LocalDate date) implements NativeObject {
     @Override
     public Object getMember(Token member) {
         return switch (member.lexeme()) {
@@ -67,8 +61,8 @@ public class NativeDate implements NativeObject {
 
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
-                    if (arguments.getFirst() instanceof NativeDate other) {
-                        return (double) ChronoUnit.DAYS.between(date, other.date);
+                    if (arguments.getFirst() instanceof NativeDate(LocalDate date1)) {
+                        return (double) ChronoUnit.DAYS.between(date, date1);
                     }
                     throw new RuntimeException("daysUntil requires another Date object.");
                 }
@@ -81,8 +75,8 @@ public class NativeDate implements NativeObject {
 
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
-                    if (arguments.getFirst() instanceof NativeDate other) {
-                        return date.isBefore(other.date);
+                    if (arguments.getFirst() instanceof NativeDate(LocalDate date1)) {
+                        return date.isBefore(date1);
                     }
                     throw new RuntimeException("isBefore requires another Date object.");
                 }

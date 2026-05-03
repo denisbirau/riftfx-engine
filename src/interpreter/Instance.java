@@ -19,7 +19,7 @@ class Instance {
             return members.get(member.lexeme());
         }
 
-        Function method = myClass.getMethod(member.lexeme());
+        var method = myClass.getMethod(member.lexeme());
         if (method != null) {
             return method.bindInstance(this);
         }
