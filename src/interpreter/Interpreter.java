@@ -439,12 +439,16 @@ public class Interpreter {
         var array = evaluate(expr.sequenceExpression());
         var index = evaluate(expr.indexExpression());
         if (array instanceof NativeArray(List<Object> elements) && index instanceof Double d) {
-            return elements.get(d.intValue());
+            var i = d.intValue();
+            if (i < 0 || i >= elements.size()) {
+                throw new RuntimeError("Array index out of bounds.", expr.leftBracket());
+            }
+            return elements.get(i);
         }
         if (array instanceof String str && index instanceof Double d) {
             var i = d.intValue();
             if (i < 0 || i >= str.length()) {
-                throw new error.RuntimeError("String index out of bounds.", expr.leftBracket());
+                throw new RuntimeError("String index out of bounds.", expr.leftBracket());
             }
             return String.valueOf(str.charAt(i)); // Returns the character as a new String
         }
@@ -456,7 +460,11 @@ public class Interpreter {
         var index = evaluate(expr.indexExpression());
         var value = evaluate(expr.expressionToAssign());
         if (array instanceof NativeArray(List<Object> elements) && index instanceof Double d) {
-            elements.set(d.intValue(), value);
+            var i = d.intValue();
+            if (i < 0 || i >= elements.size()) {
+                throw new RuntimeError("Array index out of bounds.", expr.leftBracket());
+            }
+            elements.set(i, value);
             return value;
         }
         throw new RuntimeError("Only arrays can be sub scripted.", expr.leftBracket());

@@ -14,11 +14,12 @@ public class Resolver {
     private final Stack<Map<String, Boolean>> scopes = new Stack<>();
     private final ErrorReporter errorReporter;
 
+    private enum FunctionType { NONE, FUNCTION, INITIALIZER, METHOD }
+    private enum ClassType { NONE, CLASS, SUBCLASS }
+
     private boolean insideLoop = false;
-    private boolean insideFunction = false;
-    private boolean isConstructor = false;
-    private boolean insideClass = false;
-    private boolean hasSuperclass = false;
+    private FunctionType currentFunction = FunctionType.NONE;
+    private ClassType currentClass = ClassType.NONE;
 
     public Resolver(ErrorReporter errorReporter) {
         this.errorReporter = errorReporter;
@@ -129,24 +130,27 @@ public class Resolver {
     private void resolveDefStatement(Stmt.Def stmt) {
         declare(stmt.name());
         define(stmt.name()); // We define it right away for recursion
+        resolveFunction(stmt, FunctionType.FUNCTION);
+    }
 
+    private void resolveFunction(Stmt.Def stmt, FunctionType type) {
         beginNewScope();
         for (Token parameter : stmt.parameters()) {
             declare(parameter);
             define(parameter);
         }
-        boolean aux = insideFunction;
-        insideFunction = true;
+        FunctionType enclosingFunction = currentFunction;
+        currentFunction = type;
         stmt.body().forEach(this::resolve);
-        insideFunction = aux;
+        currentFunction = enclosingFunction;
         endNewScope();
     }
 
     private void resolveReturnStatement(Stmt.Return stmt) {
-        if (!insideFunction) {
+        if (currentFunction == FunctionType.NONE) {
             errorReporter.report("Return statement outside function.", stmt.keyword().line());
         }
-        else if (stmt.expression() != null && isConstructor) {
+        else if (stmt.expression() != null && currentFunction == FunctionType.INITIALIZER) {
             errorReporter.report("Constructors can not return values.", stmt.keyword().line());
         }
         else if (stmt.expression() != null) {
@@ -155,12 +159,14 @@ public class Resolver {
     }
 
     private void resolveClassStatement(Stmt.Class stmt) {
-        insideClass = true;
+        ClassType enclosingClass = currentClass;
+        currentClass = ClassType.CLASS;
+
         declare(stmt.className());
         define(stmt.className());
 
         if (stmt.superclassLookupExpression() != null) {
-            hasSuperclass = true;
+            currentClass = ClassType.SUBCLASS;
             if (stmt.superclassLookupExpression().identifierToken().lexeme().equals(stmt.className().lexeme())) {
                 errorReporter.report(
                         "A class can not inherit from itself.",
@@ -174,17 +180,15 @@ public class Resolver {
         beginNewScope();
         defineThisKeyword();
         for (Stmt.Def method : stmt.methods()) {
-            isConstructor = method.name().lexeme().equals("constructor");
-            resolve(method);
-            isConstructor = false;
+            FunctionType declaration = method.name().lexeme().equals("constructor") ? FunctionType.INITIALIZER : FunctionType.METHOD;
+            resolveFunction(method, declaration);
         }
         endNewScope();
         if (stmt.superclassLookupExpression() != null) {
             endNewScope();
         }
 
-        insideClass = false;
-        hasSuperclass = false;
+        currentClass = enclosingClass;
     }
 
     // Expression Handlers
@@ -239,7 +243,7 @@ public class Resolver {
     }
 
     private void resolveThisExpression(Expr.This expr) {
-        if (!insideClass) {
+        if (currentClass == ClassType.NONE) {
             errorReporter.report("'this' keyword outside class.", expr.keyword().line());
         } else {
             resolveLocal(expr, expr.keyword());
@@ -247,9 +251,9 @@ public class Resolver {
     }
 
     private void resolveSuperExpression(Expr.Super expr) {
-        if (!insideClass) {
+        if (currentClass == ClassType.NONE) {
             errorReporter.report("'super' outside a class.", expr.keyword().line());
-        } else if (!hasSuperclass) {
+        } else if (currentClass != ClassType.SUBCLASS) {
             errorReporter.report("No superclass defined for 'super'.", expr.keyword().line());
         } else {
             resolveLocal(expr, expr.keyword());
@@ -277,12 +281,12 @@ public class Resolver {
             declare(parameter);
             define(parameter);
         }
-        boolean aux = insideFunction;
-        insideFunction = true;
+        FunctionType enclosingFunction = currentFunction;
+        currentFunction = FunctionType.FUNCTION;
         for (Stmt stmt : expr.lambdaBody()) {
             resolve(stmt);
         }
-        insideFunction = aux;
+        currentFunction = enclosingFunction;
         endNewScope();
     }
 

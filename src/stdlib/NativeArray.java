@@ -33,7 +33,11 @@ public record NativeArray(List<Object> elements) implements NativeObject {
                 public Object call(List<Object> arguments, Interpreter interpreter) {
                     Object index = arguments.getFirst();
                     if (index instanceof Double d) {
-                        elements.remove(d.intValue());
+                        int i = d.intValue();
+                        if (i < 0 || i >= elements.size()) {
+                            throw new RuntimeException("Array index out of bounds.");
+                        }
+                        elements.remove(i);
                         return null;
                     }
                     throw new RuntimeException("Index must be a number.");
