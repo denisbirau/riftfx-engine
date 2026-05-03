@@ -1,5 +1,7 @@
 package stdlib.ui.state;
 
+import interpreter.Callable;
+import interpreter.Interpreter;
 import scanner.Token;
 import stdlib.NativeObject;
 
@@ -25,6 +27,19 @@ public class State implements NativeObject {
     public Object getMember(Token member) {
         if (member.lexeme().equals("value")) {
             return value;
+        } else if (member.lexeme().equals("notify")) {
+            return new Callable() {
+                @Override
+                public int arity() {
+                    return 0;
+                }
+
+                @Override
+                public Object call(List<Object> arguments, Interpreter interpreter) {
+                    listeners.removeIf(uiListener -> !uiListener.update());
+                    return null;
+                }
+            };
         }
         throw new RuntimeException("Undefined property: '" + member.lexeme() + "'.");
     }

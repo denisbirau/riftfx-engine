@@ -1,0 +1,32 @@
+let tasks = State(["Buy groceries", "Learn custom language", "Build UI apps"]);
+let newTaskText = State("");
+
+Window("Task Manager", Modifier.width(450).height(600).padding(16)) {
+    Column {
+        Text("My Tasks", Modifier.fontSize(24).bold().textColor("#2563eb"));
+
+        Row(Modifier.padding(8)) {
+            TextField(newTaskText, Modifier.width(250));
+            Spacer();
+            Button("Add Task", Modifier.background("#10b981")) {
+                if (newTaskText.value != "") {
+                    tasks.value.push(newTaskText.value);
+                    tasks.notify();
+                    newTaskText.value = "";
+                }
+            }
+        }
+
+        ListView(tasks, Modifier.card()) { item ->
+            Row(Modifier.padding(8).alignment("center")) {
+                Text(item);
+                Spacer();
+                Button("Done", Modifier.background("#ef4444")) {
+                    let idx = tasks.value.indexOf(item);
+                    tasks.value.removeAt(idx);
+                    tasks.notify();
+                }
+            }
+        }
+    }
+}

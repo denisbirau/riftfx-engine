@@ -1,0 +1,59 @@
+// App 2: Configuration Dashboard
+let theme = State("Light");
+let volume = State(50.0);
+let notifications = State(true);
+let userGender = State("Prefer not to say");
+let birthDate = State(Date.now());
+
+Window("System Preferences", Modifier.width(600).height(500)) {
+    Column {
+        MenuBar {
+            Menu("File") {
+                MenuItem("Load Config...") {
+                    let path = FileChooser("Select Config File");
+                    if (path != null) { ShowAlert("INFORMATION", "File Selected", path); }
+                }
+                MenuItem("Exit") { App.exit(0); }
+            }
+        }
+
+        ScrollPane(Modifier.padding(16)) {
+            Column {
+                TitledPane("Appearance & Audio", Modifier.shadow()) {
+                    Grid {
+                        GridCell(0, 0) { Text("System Theme:"); }
+                        GridCell(1, 0) { ComboBox(theme, null, "Light", "Dark", "System default"); }
+
+                        GridCell(0, 1) { Text("Notifications:"); }
+                        GridCell(1, 1) { Checkbox("Enable alerts", notifications); }
+
+                        GridCell(0, 2) { Text("Master Volume:"); }
+                        GridCell(1, 2) {
+                            Row {
+                                Slider(0, 100, volume);
+                                Spinner(0, 100, volume);
+                            }
+                        }
+                    }
+                }
+
+                TitledPane("Personal Info", Modifier.padding(16)) {
+                    Column {
+                        Text("Select your birth date:");
+                        DatePicker(birthDate);
+
+                        Text("Gender:");
+                        Row {
+                            RadioButton("Male", "M", userGender);
+                            RadioButton("Female", "F", userGender);
+                            RadioButton("Other", "O", userGender);
+                        }
+
+                        Text("Secret PIN:");
+                        PasswordField(State("1234"));
+                    }
+                }
+            }
+        }
+    }
+}
