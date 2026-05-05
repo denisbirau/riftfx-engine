@@ -1,8 +1,7 @@
-package stdlib.ui.core;
+package stdlib.ui.state;
 
 import javafx.beans.property.Property;
 import javafx.scene.Node;
-import stdlib.ui.state.State;
 
 import java.util.Objects;
 

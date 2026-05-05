@@ -7,12 +7,10 @@ import javafx.scene.control.ListView;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import stdlib.NativeArray;
-import stdlib.ui.core.InterpreterUtils;
-import stdlib.ui.core.ReactiveBinding;
-import stdlib.ui.core.RendererUtils;
-import stdlib.ui.core.UITheme;
-import stdlib.ui.state.ModifierInstance;
+import stdlib.types.NativeArray;
+import stdlib.ui.state.ReactiveBinding;
+import stdlib.ui.core.*;
+import stdlib.ui.modifier.ModifierInstance;
 import stdlib.ui.state.State;
 
 import java.util.ArrayList;

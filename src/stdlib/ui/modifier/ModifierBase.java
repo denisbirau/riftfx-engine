@@ -1,7 +1,7 @@
-package stdlib.ui.state;
+package stdlib.ui.modifier;
 
 import scanner.Token;
-import stdlib.NativeObject;
+import stdlib.core.NativeObject;
 
 public class ModifierBase implements NativeObject {
     @Override

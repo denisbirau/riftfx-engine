@@ -4,26 +4,16 @@ import interpreter.Callable;
 import interpreter.Interpreter;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
+import stdlib.ui.core.AbstractUIComponent;
 import stdlib.ui.core.InterpreterUtils;
 import stdlib.ui.core.RendererUtils;
-import stdlib.ui.state.ModifierInstance;
+import stdlib.ui.modifier.ModifierInstance;
 
 import java.util.List;
 
-public class ScrollPaneUI implements Callable {
-    @Override
-    public int arity() {
-        return 2;
-    }
-
-    @Override
-    public List<String> parameterNames() {
-        return List.of("modifier", "content");
-    }
-
-    @Override
-    public boolean acceptsArity(int argCount) {
-        return argCount >= 1 && argCount <= arity();
+public class ScrollPaneUI extends AbstractUIComponent {
+    public ScrollPaneUI() {
+        super(1, 2, "modifier", "content");
     }
 
     @Override

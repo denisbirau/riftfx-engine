@@ -1,4 +1,4 @@
-package stdlib;
+package stdlib.core;
 
 import scanner.Token;
 

@@ -1,27 +1,16 @@
 package stdlib.ui.dialogs;
 
-import interpreter.Callable;
 import interpreter.Interpreter;
 import javafx.stage.FileChooser;
+import stdlib.core.AbstractCallable;
 import stdlib.ui.core.InterpreterUtils;
 
 import java.io.File;
 import java.util.List;
 
-public class ShowFileChooser implements Callable {
-    @Override
-    public int arity() {
-        return 1;
-    }
-
-    @Override
-    public List<String> parameterNames() {
-        return List.of("title");
-    }
-
-    @Override
-    public boolean acceptsArity(int argCount) {
-        return argCount <= arity();
+public class ShowFileChooser extends AbstractCallable {
+    public ShowFileChooser() {
+        super(1, 1, "title");
     }
 
     @Override

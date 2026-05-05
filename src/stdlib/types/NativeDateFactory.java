@@ -1,8 +1,9 @@
-package stdlib;
+package stdlib.types;
 
-import interpreter.Callable;
 import interpreter.Interpreter;
 import scanner.Token;
+import stdlib.core.AbstractCallable;
+import stdlib.core.NativeObject;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -11,23 +12,13 @@ public class NativeDateFactory implements NativeObject {
     @Override
     public Object getMember(Token member) {
         return switch (member.lexeme()) {
-            case "now" -> new Callable() {
-                @Override
-                public int arity() {
-                    return 0;
-                }
-
+            case "now" -> new AbstractCallable(0, 0) {
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
                     return new NativeDate(LocalDate.now());
                 }
             };
-            case "parse" -> new Callable() {
-                @Override
-                public int arity() {
-                    return 1;
-                }
-
+            case "parse" -> new AbstractCallable(1, 1, "string") {
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
                     try {

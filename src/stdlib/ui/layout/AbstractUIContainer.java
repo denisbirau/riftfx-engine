@@ -3,34 +3,31 @@ package stdlib.ui.layout;
 import interpreter.Callable;
 import interpreter.Interpreter;
 import javafx.scene.layout.Pane;
+import stdlib.ui.core.AbstractUIComponent;
 import stdlib.ui.core.InterpreterUtils;
 import stdlib.ui.core.RendererUtils;
 import stdlib.ui.core.UITheme;
-import stdlib.ui.state.ModifierInstance;
+import stdlib.ui.modifier.ModifierInstance;
 
 import java.util.List;
 
-public abstract class AbstractUIContainer<T extends Pane> implements Callable {
-    @Override
-    public int arity() {
-        return 2;
-    }
-
-    @Override
-    public List<String> parameterNames() {
-        return List.of("modifier", "content");
-    }
-
-    @Override
-    public boolean acceptsArity(int argCount) {
-        return argCount >= 1 && argCount <= arity();
+public abstract class AbstractUIContainer<T extends Pane> extends AbstractUIComponent {
+    public AbstractUIContainer(int minArgs, int maxArgs, String... paramNames) {
+        super(minArgs, maxArgs, paramNames);
     }
 
     protected abstract T createContainer();
-
     protected abstract void applySpacing(T container, double spacing);
-
     protected abstract double getDefaultSpacing();
+
+    protected void renderContent(Interpreter interpreter, Pane container, Callable lambda) {
+        interpreter.renderer.pushContainer(container);
+        try {
+            lambda.call(List.of(), interpreter);
+        } finally {
+            interpreter.renderer.popContainer();
+        }
+    }
 
     @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
@@ -53,13 +50,7 @@ public abstract class AbstractUIContainer<T extends Pane> implements Callable {
         }
 
         RendererUtils.registerComponent(interpreter, container, getClass().getSimpleName());
-        interpreter.renderer.pushContainer(container);
-
-        try {
-            lambda.call(List.of(), interpreter);
-        } finally {
-            interpreter.renderer.popContainer();
-        }
+        renderContent(interpreter, container, lambda);
         return null;
     }
 }

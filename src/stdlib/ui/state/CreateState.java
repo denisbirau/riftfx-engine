@@ -1,19 +1,13 @@
 package stdlib.ui.state;
 
-import interpreter.Callable;
 import interpreter.Interpreter;
+import stdlib.core.AbstractCallable;
 
 import java.util.List;
 
-public class CreateState implements Callable {
-    @Override
-    public int arity() {
-        return 1;
-    }
-
-    @Override
-    public List<String> parameterNames() {
-        return List.of("initialValue");
+public class CreateState extends AbstractCallable {
+    public CreateState() {
+        super(1, 1, "initialValue");
     }
 
     @Override

@@ -1,19 +1,18 @@
 package stdlib.ui.layout;
 
-import interpreter.Callable;
 import interpreter.Interpreter;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import stdlib.ui.core.AbstractUIComponent;
 import stdlib.ui.core.RendererUtils;
 
 import java.util.List;
 
-public class SpacerUI implements Callable {
-    @Override
-    public int arity() {
-        return 0;
+public class SpacerUI extends AbstractUIComponent {
+    public SpacerUI() {
+        super(0, 0);
     }
 
     @Override

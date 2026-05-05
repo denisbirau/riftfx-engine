@@ -2,11 +2,9 @@ package stdlib.ui.controls;
 
 import interpreter.Interpreter;
 import javafx.scene.control.RadioButton;
-import stdlib.ui.core.InterpreterUtils;
-import stdlib.ui.core.ReactiveBinding;
-import stdlib.ui.core.RendererUtils;
-import stdlib.ui.core.UITheme;
-import stdlib.ui.state.ModifierInstance;
+import stdlib.ui.state.ReactiveBinding;
+import stdlib.ui.core.*;
+import stdlib.ui.modifier.ModifierInstance;
 import stdlib.ui.state.State;
 
 import java.util.List;

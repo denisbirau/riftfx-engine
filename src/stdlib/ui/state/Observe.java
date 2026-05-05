@@ -3,27 +3,20 @@ package stdlib.ui.state;
 import interpreter.Callable;
 import interpreter.Interpreter;
 import javafx.scene.layout.VBox;
+import stdlib.ui.core.AbstractUIComponent;
 import stdlib.ui.core.InterpreterUtils;
-import stdlib.ui.core.RendererUtils;
 
 import java.util.List;
 
-public class Observe implements Callable {
-    @Override
-    public int arity() {
-        return 2;
-    }
-
-    @Override
-    public List<String> parameterNames() {
-        return List.of("state", "content");
+public class Observe extends AbstractUIComponent {
+    public Observe() {
+        super(2, 2, "state", "content");
     }
 
     @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
         State state = InterpreterUtils.getArgument(arguments, 0, State.class, null);
         Callable lambda = InterpreterUtils.getArgument(arguments, 1, Callable.class, null);
-
         if (state == null) {
             throw new RuntimeException("Observe requires a state object.");
         }
@@ -32,12 +25,10 @@ public class Observe implements Callable {
         }
 
         VBox container = new VBox();
-        RendererUtils.registerComponent(interpreter, container, "Observe");
+        register(interpreter, container);
 
         UIListener recompose = () -> {
             // 1. THE LIFECYCLE CHECK
-            // If an outer Observe cleared the screen, this container was orphaned.
-            // Returning false tells the State object to permanently delete this listener.
             if (container.getParent() == null && container.getScene() == null) {
                 return false;
             }

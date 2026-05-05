@@ -1,8 +1,9 @@
-package stdlib;
+package stdlib.types;
 
-import interpreter.Callable;
 import interpreter.Interpreter;
 import scanner.Token;
+import stdlib.core.AbstractCallable;
+import stdlib.core.NativeObject;
 
 import java.util.List;
 
@@ -11,28 +12,17 @@ public record NativeArray(List<Object> elements) implements NativeObject {
     public Object getMember(Token member) {
         return switch (member.lexeme()) {
             case "len" -> (double) elements.size();
-            case "push" -> new Callable() {
-                @Override
-                public int arity() {
-                    return 1;
-                }
-
+            case "push" -> new AbstractCallable(1, 1, "item") {
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
                     elements.add(arguments.getFirst());
                     return null;
                 }
             };
-            case "removeAt" -> new Callable() {
-                @Override
-                public int arity() {
-                    return 1;
-                }
-
+            case "removeAt" -> new AbstractCallable(1, 1, "index") {
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
-                    Object index = arguments.getFirst();
-                    if (index instanceof Double d) {
+                    if (arguments.getFirst() instanceof Double d) {
                         int i = d.intValue();
                         if (i < 0 || i >= elements.size()) {
                             throw new RuntimeException("Array index out of bounds.");
@@ -43,12 +33,7 @@ public record NativeArray(List<Object> elements) implements NativeObject {
                     throw new RuntimeException("Index must be a number.");
                 }
             };
-            case "indexOf" -> new Callable() {
-                @Override
-                public int arity() {
-                    return 1;
-                }
-
+            case "indexOf" -> new AbstractCallable(1, 1, "item") {
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
                     return (double) elements.indexOf(arguments.getFirst());

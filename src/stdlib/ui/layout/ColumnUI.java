@@ -4,6 +4,10 @@ import javafx.scene.layout.VBox;
 import stdlib.ui.core.UITheme;
 
 public class ColumnUI extends AbstractUIContainer<VBox> {
+    public ColumnUI() {
+        super(1, 2, "modifier", "content");
+    }
+
     @Override
     protected VBox createContainer() {
         return new VBox();

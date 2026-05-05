@@ -4,6 +4,10 @@ import javafx.scene.layout.HBox;
 import stdlib.ui.core.UITheme;
 
 public class RowUI extends AbstractUIContainer<HBox> {
+    public RowUI() {
+        super(1, 2, "modifier", "content");
+    }
+
     @Override
     protected HBox createContainer() {
         return new HBox();

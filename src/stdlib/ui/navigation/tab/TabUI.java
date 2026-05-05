@@ -1,37 +1,32 @@
-package stdlib.ui.layout;
+package stdlib.ui.navigation.tab;
 
 import interpreter.Callable;
 import interpreter.Interpreter;
 import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import stdlib.core.AbstractCallable;
 import stdlib.ui.core.InterpreterUtils;
 
 import java.util.List;
 
-public class TabUI implements Callable {
-    @Override
-    public int arity() {
-        return 2;
-    }
-
-    @Override
-    public List<String> parameterNames() {
-        return List.of("title", "content");
-    }
-
-    @Override
-    public boolean acceptsArity(int argCount) {
-        return argCount >= 1 && argCount <= arity();
+public class TabUI extends AbstractCallable {
+    public TabUI() {
+        super(1, 2, "title", "content");
     }
 
     @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
         String title = InterpreterUtils.getArgument(arguments, 0, String.class, "Tab");
         Callable lambda = InterpreterUtils.getArgument(arguments, 1, Callable.class, null);
-
         if (lambda == null) {
             throw new RuntimeException("Tab requires a content block.");
+        }
+
+        TabPane tabPane = TabPaneUI.TAB_CONTEXT.peek();
+        if (tabPane == null) {
+            throw new RuntimeException("Tab must be placed inside a TabPane component.");
         }
 
         Tab tab = new Tab(title);
@@ -41,12 +36,14 @@ public class TabUI implements Callable {
         VBox.setVgrow(tabContent, Priority.ALWAYS);
         tab.setContent(tabContent);
 
+        tabPane.getTabs().add(tab);
+
         interpreter.renderer.pushContainer(tabContent);
         try {
             lambda.call(List.of(), interpreter);
         } finally {
             interpreter.renderer.popContainer();
         }
-        return tab;
+        return null;
     }
 }

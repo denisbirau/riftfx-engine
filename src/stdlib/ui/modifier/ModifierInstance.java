@@ -1,9 +1,9 @@
-package stdlib.ui.state;
+package stdlib.ui.modifier;
 
 import interpreter.Callable;
 import interpreter.Interpreter;
 import scanner.Token;
-import stdlib.NativeObject;
+import stdlib.core.NativeObject;
 import stdlib.ui.core.UITheme;
 
 import java.util.HashMap;
@@ -12,6 +12,9 @@ import java.util.Map;
 
 public class ModifierInstance implements NativeObject {
     public final Map<String, String> cssProperties;
+
+    // Cache the parsed card properties so we don't split strings every call
+    private static final Map<String, String> CARD_PROPERTIES = parseCssString();
 
     public ModifierInstance() {
         this.cssProperties = new HashMap<>();
@@ -37,6 +40,38 @@ public class ModifierInstance implements NativeObject {
         };
     }
 
+    private Callable createFlagModifier(String cssKey, String cssValue) {
+        return new Callable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public Object call(List<Object> arguments, Interpreter interpreter) {
+                ModifierInstance modifierInstance = new ModifierInstance(cssProperties);
+                modifierInstance.cssProperties.put(cssKey, cssValue);
+                return modifierInstance;
+            }
+        };
+    }
+
+    private Callable createBatchModifier() {
+        return new Callable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public Object call(List<Object> arguments, Interpreter interpreter) {
+                ModifierInstance modifierInstance = new ModifierInstance(cssProperties);
+                modifierInstance.cssProperties.putAll(ModifierInstance.CARD_PROPERTIES);
+                return modifierInstance;
+            }
+        };
+    }
+
     @Override
     public Object getMember(Token member) {
         return switch (member.lexeme()) {
@@ -57,39 +92,13 @@ public class ModifierInstance implements NativeObject {
             case "fontSize" -> createModifierFunction("-fx-font-size", "px");
             case "fontFamily" -> createModifierFunction("-fx-font-family", "");
             case "textColor" -> createModifierFunction("-fx-text-fill", "");
-            // Visual Effects
+            // Visual Effects and Flags
             case "opacity" -> createModifierFunction("-fx-opacity", "");
             case "rotate" -> createModifierFunction("-fx-rotate", "deg");
-            case "bold" -> new Callable() {
-                @Override
-                public int arity() { return 0; }
-                @Override
-                public Object call(List<Object> arguments, Interpreter interpreter) {
-                    ModifierInstance modifierInstance = new ModifierInstance(cssProperties);
-                    modifierInstance.cssProperties.put("-fx-font-weight", "bold");
-                    return modifierInstance;
-                }
-            };
-            case "italic" -> new Callable() {
-                @Override
-                public int arity() { return 0; }
-                @Override
-                public Object call(List<Object> arguments, Interpreter interpreter) {
-                    ModifierInstance modifierInstance = new ModifierInstance(cssProperties);
-                    modifierInstance.cssProperties.put("-fx-font-style", "italic");
-                    return modifierInstance;
-                }
-            };
-            case "shadow" -> new Callable() {
-                @Override
-                public int arity() { return 0; }
-                @Override
-                public Object call(List<Object> arguments, Interpreter interpreter) {
-                    ModifierInstance modifierInstance = new ModifierInstance(cssProperties);
-                    modifierInstance.cssProperties.put("-fx-effect", "dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 4)");
-                    return modifierInstance;
-                }
-            };
+            case "bold" -> createFlagModifier("-fx-font-weight", "bold");
+            case "italic" -> createFlagModifier("-fx-font-style", "italic");
+            case "shadow" -> createFlagModifier("-fx-effect", "dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 4)");
+            case "card" -> createBatchModifier();
             case "cornerRadius" -> new Callable() {
                 @Override
                 public int arity() { return 1; }
@@ -99,21 +108,6 @@ public class ModifierInstance implements NativeObject {
                     String radius = arguments.getFirst().toString() + "px";
                     modifierInstance.cssProperties.put("-fx-background-radius", radius);
                     modifierInstance.cssProperties.put("-fx-border-radius", radius);
-                    return modifierInstance;
-                }
-            };
-            case "card" -> new Callable() {
-                @Override
-                public int arity() { return 0; }
-                @Override
-                public Object call(List<Object> arguments, Interpreter interpreter) {
-                    ModifierInstance modifierInstance = new ModifierInstance(cssProperties);
-                    String[] props = UITheme.CARD.split(";");
-                    for (String p : props) {
-                        if (p.trim().isEmpty()) continue;
-                        String[] kv = p.split(":");
-                        if (kv.length == 2) modifierInstance.cssProperties.put(kv[0].trim(), kv[1].trim());
-                    }
                     return modifierInstance;
                 }
             };
@@ -130,5 +124,20 @@ public class ModifierInstance implements NativeObject {
         StringBuilder css = new StringBuilder();
         cssProperties.forEach((key, value) -> css.append(key).append(": ").append(value).append("; "));
         return css.toString();
+    }
+
+    private static Map<String, String> parseCssString() {
+        Map<String, String> map = new HashMap<>();
+        String[] props = UITheme.CARD.split(";");
+        for (String p : props) {
+            if (p.trim().isEmpty()) {
+                continue;
+            }
+            String[] kv = p.split(":");
+            if (kv.length == 2) {
+                map.put(kv[0].trim(), kv[1].trim());
+            }
+        }
+        return map;
     }
 }

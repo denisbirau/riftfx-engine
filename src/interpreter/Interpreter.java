@@ -6,9 +6,9 @@ import error.ErrorReporter;
 import scanner.Token;
 import scanner.TokenType;
 import error.RuntimeError;
-import stdlib.NativeArray;
-import stdlib.NativeObject;
-import stdlib.StandardLibrary;
+import stdlib.types.NativeArray;
+import stdlib.core.NativeObject;
+import stdlib.core.StandardLibrary;
 
 import java.util.*;
 
@@ -28,7 +28,7 @@ public class Interpreter {
     }
 
     public void interpret() {
-        for (Stmt statement : statements) {
+        for (var statement : statements) {
             try {
                 execute(statement);
             } catch (RuntimeError error) {
@@ -80,7 +80,7 @@ public class Interpreter {
     }
 
     private void executeLetStatement(Stmt.Let stmt) {
-        final var value = (stmt.initializer() != null) ? evaluate(stmt.initializer()) : null;
+        var value = (stmt.initializer() != null) ? evaluate(stmt.initializer()) : null;
         currentEnvironment.define(stmt.variableName().lexeme(), value);
     }
 
@@ -89,7 +89,7 @@ public class Interpreter {
     }
 
     private void executeBlockStatement(Stmt.Block stmt) {
-        final var previousEnvironment = currentEnvironment;
+        var previousEnvironment = currentEnvironment;
         currentEnvironment = new Environment(currentEnvironment);
         try {
             for (var subStmt : stmt.subStatements()) {

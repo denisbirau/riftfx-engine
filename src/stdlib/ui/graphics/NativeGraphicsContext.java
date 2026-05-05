@@ -1,10 +1,10 @@
-package stdlib.ui.controls;
+package stdlib.ui.graphics;
 
 import interpreter.Callable;
 import interpreter.Interpreter;
 import javafx.scene.canvas.GraphicsContext;
 import scanner.Token;
-import stdlib.NativeObject;
+import stdlib.core.NativeObject;
 
 import java.util.List;
 

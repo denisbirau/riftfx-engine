@@ -2,7 +2,7 @@ package stdlib.ui.core;
 
 import interpreter.Interpreter;
 import javafx.scene.Node;
-import stdlib.ui.state.ModifierInstance;
+import stdlib.ui.modifier.ModifierInstance;
 
 public class RendererUtils {
     public static void registerComponent(Interpreter interpreter, Node node, String name) {

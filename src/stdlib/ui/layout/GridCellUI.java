@@ -4,31 +4,21 @@ import interpreter.Callable;
 import interpreter.Interpreter;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
+import stdlib.core.AbstractCallable;
 import stdlib.ui.core.InterpreterUtils;
 import stdlib.ui.core.RendererUtils;
 
 import java.util.List;
 
-public class GridCellUI implements Callable {
-    @Override
-    public int arity() {
-        return 3;
-    }
-
-    @Override
-    public List<String> parameterNames() {
-        return List.of("column", "row", "content");
-    }
-
-    @Override
-    public boolean acceptsArity(int argCount) {
-        return argCount == arity();
+public class GridCellUI extends AbstractCallable {
+    public GridCellUI() {
+        super(3, 3, "column", "row", "content");
     }
 
     @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
-        double col = InterpreterUtils.getArgument(arguments, 0, Double.class, 0.0);
-        double row = InterpreterUtils.getArgument(arguments, 1, Double.class, 0.0);
+        double row = InterpreterUtils.getArgument(arguments, 0, Double.class, 0.0);
+        double col = InterpreterUtils.getArgument(arguments, 1, Double.class, 0.0);
         Callable lambda = InterpreterUtils.getArgument(arguments, 2, Callable.class, null);
 
         if (lambda == null) {

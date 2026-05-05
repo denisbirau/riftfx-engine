@@ -4,27 +4,17 @@ import interpreter.Callable;
 import interpreter.Interpreter;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.VBox;
+import stdlib.ui.core.AbstractUIComponent;
 import stdlib.ui.core.InterpreterUtils;
 import stdlib.ui.core.RendererUtils;
 import stdlib.ui.core.UITheme;
-import stdlib.ui.state.ModifierInstance;
+import stdlib.ui.modifier.ModifierInstance;
 
 import java.util.List;
 
-public class TitledPaneUI implements Callable {
-    @Override
-    public int arity() {
-        return 3;
-    }
-
-    @Override
-    public List<String> parameterNames() {
-        return List.of("title", "modifier", "content");
-    }
-
-    @Override
-    public boolean acceptsArity(int argCount) {
-        return argCount >= 2 && argCount <= arity();
+public class TitledPaneUI extends AbstractUIComponent {
+    public TitledPaneUI() {
+        super(2, 3, "title", "modifier", "content");
     }
 
     @Override

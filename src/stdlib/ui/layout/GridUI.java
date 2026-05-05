@@ -4,6 +4,10 @@ import javafx.scene.layout.GridPane;
 import stdlib.ui.core.UITheme;
 
 public class GridUI extends AbstractUIContainer<GridPane> {
+    public GridUI() {
+        super(1, 2, "modifier", "content");
+    }
+
     @Override
     protected GridPane createContainer() {
         return new GridPane();

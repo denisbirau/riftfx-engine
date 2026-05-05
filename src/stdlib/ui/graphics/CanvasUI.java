@@ -1,8 +1,9 @@
-package stdlib.ui.controls;
+package stdlib.ui.graphics;
 
 import interpreter.Callable;
 import interpreter.Interpreter;
 import javafx.scene.canvas.Canvas;
+import stdlib.ui.core.AbstractUIComponent;
 import stdlib.ui.core.InterpreterUtils;
 
 import java.util.List;

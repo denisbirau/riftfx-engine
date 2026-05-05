@@ -1,8 +1,10 @@
-package stdlib;
+package stdlib.io;
 
-import interpreter.Callable;
 import interpreter.Interpreter;
 import scanner.Token;
+import stdlib.core.AbstractCallable;
+import stdlib.core.NativeObject;
+import stdlib.types.NativeArray;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,12 +18,7 @@ public class NativeFileIO implements NativeObject {
     @Override
     public Object getMember(Token member) {
         return switch (member.lexeme()) {
-            case "readText" -> new Callable() {
-                @Override
-                public int arity() {
-                    return 1;
-                }
-
+            case "readText" -> new AbstractCallable(1, 1, "path") {
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
                     try {
@@ -32,12 +29,7 @@ public class NativeFileIO implements NativeObject {
                     }
                 }
             };
-            case "writeText" -> new Callable() {
-                @Override
-                public int arity() {
-                    return 2;
-                }
-
+            case "writeText" -> new AbstractCallable(2, 2, "path", "content") {
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
                     try {
@@ -50,24 +42,14 @@ public class NativeFileIO implements NativeObject {
                     }
                 }
             };
-            case "exists" -> new Callable() {
-                @Override
-                public int arity() {
-                    return 1;
-                }
-
+            case "exists" -> new AbstractCallable(1, 1, "path") {
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
                     Path path = Paths.get(arguments.getFirst().toString());
                     return Files.exists(path);
                 }
             };
-            case "delete" -> new Callable() {
-                @Override
-                public int arity() {
-                    return 1;
-                }
-
+            case "delete" -> new AbstractCallable(1, 1, "path") {
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
                     try {
@@ -78,12 +60,7 @@ public class NativeFileIO implements NativeObject {
                     }
                 }
             };
-            case "listDirectory" -> new Callable() {
-                @Override
-                public int arity() {
-                    return 1;
-                }
-
+            case "listDirectory" -> new AbstractCallable(1, 1, "path") {
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
                     Path path = Paths.get(arguments.getFirst().toString());

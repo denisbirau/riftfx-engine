@@ -3,9 +3,12 @@ package stdlib.ui.controls;
 import interpreter.Interpreter;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
+import javafx.scene.shape.Rectangle;
+import stdlib.ui.core.AbstractUIComponent;
 import stdlib.ui.core.InterpreterUtils;
 import stdlib.ui.core.RendererUtils;
-import stdlib.ui.state.ModifierInstance;
+import stdlib.ui.modifier.ModifierInstance;
 
 import java.util.List;
 
@@ -24,9 +27,42 @@ public class ImageUI extends AbstractUIComponent {
 
         ImageView imageView = new ImageView(new Image(url));
         imageView.setPreserveRatio(true);
-        RendererUtils.applyModifier(imageView, "", modifierInstance);
 
-        register(interpreter, imageView);
+        StackPane imageContainer = new StackPane(imageView);
+        if (modifierInstance != null) {
+            if (modifierInstance.cssProperties.containsKey("-fx-pref-width")) {
+                imageView.setFitWidth(parsePx(modifierInstance.cssProperties.get("-fx-pref-width")));
+            }
+            if (modifierInstance.cssProperties.containsKey("-fx-pref-height")) {
+                imageView.setFitHeight(parsePx(modifierInstance.cssProperties.get("-fx-pref-height")));
+            }
+            if (modifierInstance.cssProperties.containsKey("-fx-background-radius")) {
+                double radius = parsePx(modifierInstance.cssProperties.get("-fx-background-radius"));
+                Rectangle clip = new Rectangle();
+                clip.setArcWidth(radius * 2);
+                clip.setArcHeight(radius * 2);
+
+                clip.setWidth(imageView.getBoundsInLocal().getWidth());
+                clip.setHeight(imageView.getBoundsInLocal().getHeight());
+
+                imageView.boundsInLocalProperty().addListener((_, _, newBounds) -> {
+                    clip.setWidth(newBounds.getWidth());
+                    clip.setHeight(newBounds.getHeight());
+                });
+                imageView.setClip(clip);
+            }
+            RendererUtils.applyModifier(imageContainer, "-fx-background-color: transparent;", modifierInstance);
+        }
+
+        register(interpreter, imageContainer);
         return null;
+    }
+
+    private double parsePx(String cssValue) {
+        try {
+            return Double.parseDouble(cssValue.replace("px", "").trim());
+        } catch (NumberFormatException _) {
+            return 0.0;
+        }
     }
 }

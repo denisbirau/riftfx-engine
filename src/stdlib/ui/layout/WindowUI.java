@@ -5,27 +5,17 @@ import interpreter.Interpreter;
 import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import stdlib.core.AbstractCallable;
 import stdlib.ui.core.InterpreterUtils;
 import stdlib.ui.core.RendererUtils;
 import stdlib.ui.core.UITheme;
-import stdlib.ui.state.ModifierInstance;
+import stdlib.ui.modifier.ModifierInstance;
 
 import java.util.List;
 
-public class WindowUI implements Callable {
-    @Override
-    public int arity() {
-        return 3;
-    }
-
-    @Override
-    public List<String> parameterNames() {
-        return List.of("title", "modifier", "content");
-    }
-
-    @Override
-    public boolean acceptsArity(int argCount) {
-        return argCount >= 2 && argCount <= arity();
+public class WindowUI extends AbstractCallable {
+    public WindowUI() {
+        super(2, 3, "title", "modifier", "content");
     }
 
     @Override

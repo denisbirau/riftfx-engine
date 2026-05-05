@@ -3,7 +3,7 @@ package stdlib.ui.state;
 import interpreter.Callable;
 import interpreter.Interpreter;
 import scanner.Token;
-import stdlib.NativeObject;
+import stdlib.core.NativeObject;
 
 import java.util.ArrayList;
 import java.util.List;

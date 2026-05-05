@@ -1,28 +1,17 @@
 package stdlib.ui.dialogs;
 
-import interpreter.Callable;
 import interpreter.Interpreter;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
+import stdlib.core.AbstractCallable;
 import stdlib.ui.core.InterpreterUtils;
 
 import java.util.List;
 import java.util.Optional;
 
-public class ShowAlert implements Callable {
-    @Override
-    public int arity() {
-        return 3;
-    }
-
-    @Override
-    public List<String> parameterNames() {
-        return List.of("type", "title", "message");
-    }
-
-    @Override
-    public boolean acceptsArity(int argCount) {
-        return argCount >= 2 && argCount <= arity();
+public class ShowAlert extends AbstractCallable {
+    public ShowAlert() {
+        super(2, 3, "type", "title", "message");
     }
 
     @Override

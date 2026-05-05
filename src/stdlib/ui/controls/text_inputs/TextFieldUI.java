@@ -1,4 +1,4 @@
-package stdlib.ui.controls;
+package stdlib.ui.controls.text_inputs;
 
 import javafx.scene.control.TextField;
 

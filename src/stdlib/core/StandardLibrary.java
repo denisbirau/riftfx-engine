@@ -1,15 +1,25 @@
-package stdlib;
+package stdlib.core;
 
+import stdlib.system.NativeApp;
+import stdlib.types.NativeDateFactory;
+import stdlib.io.NativeFileIO;
+import stdlib.math.NativeMath;
 import stdlib.ui.controls.*;
+import stdlib.ui.graphics.CanvasUI;
+import stdlib.ui.controls.text_inputs.PasswordFieldUI;
+import stdlib.ui.controls.text_inputs.TextAreaUI;
+import stdlib.ui.controls.text_inputs.TextFieldUI;
 import stdlib.ui.dialogs.ShowAlert;
 import stdlib.ui.dialogs.ShowFileChooser;
 import stdlib.ui.layout.*;
-import stdlib.ui.menu.MenuBarUI;
-import stdlib.ui.menu.MenuItemUI;
-import stdlib.ui.menu.MenuUI;
+import stdlib.ui.navigation.menu.MenuBarUI;
+import stdlib.ui.navigation.menu.MenuItemUI;
+import stdlib.ui.navigation.menu.MenuUI;
 import stdlib.ui.state.CreateState;
-import stdlib.ui.state.ModifierBase;
+import stdlib.ui.modifier.ModifierBase;
 import stdlib.ui.state.Observe;
+import stdlib.ui.navigation.tab.TabPaneUI;
+import stdlib.ui.navigation.tab.TabUI;
 
 import java.util.Map;
 
