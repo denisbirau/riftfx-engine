@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Launch Java Program",
+            "request": "launch",
+            "mainClass": ""
+        },
+        {
+            "type": "java",
+            "name": "Run RiftFX",
+            "request": "launch",
+            "mainClass": "com.riftfx.app.Main",
+            "projectName": "riftfx-engine",
+            "args": [
+                "task_manager.rfx"
+            ]
+        }
+    ]
+}
