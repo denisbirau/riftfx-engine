@@ -20,6 +20,9 @@ public class Interpreter {
     public final ErrorReporter errorReporter;
     public final UIRenderer renderer;
 
+    public static final Map<Integer, Object> stateCache = new HashMap<>();
+    public static int currentStateIndex = 0;
+
     public Interpreter(List<Stmt> statements, ErrorReporter errorReporter, UIRenderer renderer) {
         this.statements = statements;
         this.errorReporter = errorReporter;
@@ -28,6 +31,7 @@ public class Interpreter {
     }
 
     public void interpret() {
+        currentStateIndex = 0;
         for (var statement : statements) {
             try {
                 execute(statement);

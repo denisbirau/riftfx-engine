@@ -1,0 +1,65 @@
+def SettingSection(title, contentLambda) {
+    TitledPane(title, Modifier.shadow().padding(8)) {
+        Column(Modifier.padding(10)) {
+            contentLambda();
+        }
+    }
+}
+
+def SliderRow(label, stateObj) {
+    Row(Modifier.padding(8).alignment("center")) {
+        Text(label, Modifier.width(120).bold());
+        Slider(0, 100, stateObj);
+        Spacer();
+        Observe(stateObj) {
+            Text(stateObj.value + "%", Modifier.textColor("#64748b"));
+        }
+    }
+}
+
+def ToggleRow(label, stateObj) {
+    Row(Modifier.padding(8).alignment("center")) {
+        Text(label, Modifier.width(120).bold());
+        Checkbox("", stateObj);
+    }
+}
+
+// App State
+let settings = {
+    volume: State(75.0),
+    brightness: State(50.0),
+    notifications: State(true),
+    autoUpdate: State(false)
+};
+
+// Main UI
+Window("System Preferences", Modifier.width(500).height(600).padding(16)) {
+    ScrollPane(Modifier.padding(8)) {
+        Column {
+            Text("Preferences", Modifier.fontSize(28).bold().padding(8));
+
+            SettingSection("Audio & Display") {
+                SliderRow("Master Volume", settings.volume);
+                SliderRow("Brightness", settings.brightness);
+            }
+
+            SettingSection("System") {
+                ToggleRow("Push Notifications", settings.notifications);
+                ToggleRow("Auto-Update OS", settings.autoUpdate);
+            }
+
+            Spacer();
+            Button("Reset to Defaults", Modifier.background("#ef4444")) {
+                settings.volume.value = 50.0;
+                settings.brightness.value = 50.0;
+                settings.notifications.value = true;
+                settings.autoUpdate.value = false;
+
+                settings.volume.notify();
+                settings.brightness.notify();
+                settings.notifications.notify();
+                settings.autoUpdate.notify();
+            }
+        }
+    }
+}

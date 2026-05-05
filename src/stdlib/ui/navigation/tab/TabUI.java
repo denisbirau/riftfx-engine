@@ -8,18 +8,21 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import stdlib.core.AbstractCallable;
 import stdlib.ui.core.InterpreterUtils;
+import stdlib.ui.core.RendererUtils;
+import stdlib.ui.modifier.ModifierInstance;
 
 import java.util.List;
 
 public class TabUI extends AbstractCallable {
     public TabUI() {
-        super(1, 2, "title", "content");
+        super(1, 3, "title", "modifier", "content");
     }
 
     @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
         String title = InterpreterUtils.getArgument(arguments, 0, String.class, "Tab");
-        Callable lambda = InterpreterUtils.getArgument(arguments, 1, Callable.class, null);
+        ModifierInstance modifierInstance = InterpreterUtils.getArgument(arguments, 1, ModifierInstance.class, null);
+        Callable lambda = InterpreterUtils.getArgument(arguments, 2, Callable.class, null);
         if (lambda == null) {
             throw new RuntimeException("Tab requires a content block.");
         }
@@ -34,8 +37,8 @@ public class TabUI extends AbstractCallable {
 
         VBox tabContent = new VBox(10);
         VBox.setVgrow(tabContent, Priority.ALWAYS);
+        RendererUtils.applyModifier(tabContent, "-fx-background-color: transparent;", modifierInstance);
         tab.setContent(tabContent);
-
         tabPane.getTabs().add(tab);
 
         interpreter.renderer.pushContainer(tabContent);

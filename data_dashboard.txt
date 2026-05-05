@@ -1,0 +1,54 @@
+class BarChart {
+    constructor(dataState, width, height) {
+        this.dataState = dataState;
+        this.w = width;
+        this.h = height;
+    }
+
+    render() {
+        Observe(this.dataState) {
+            Canvas(this.w, this.h) { ctx ->
+                ctx.setFill("#f1f5f9");
+                ctx.fillRect(0.0, 0.0, this.w, this.h);
+
+                let data = this.dataState.value;
+                let barWidth = this.w / data.len;
+                let i = 0;
+
+                while (i < data.len) {
+                    let barHeight = data[i];
+                    let x = i * barWidth;
+                    let y = this.h - barHeight;
+
+                    ctx.setFill("#3b82f6");
+                    ctx.fillRect(x + 4, y, barWidth - 8, barHeight);
+                    i = i + 1;
+                }
+            }
+        }
+    }
+}
+
+let monthlyRevenue = State([50.0, 120.0, 80.0, 200.0, 150.0]);
+
+Window("Data Dashboard", Modifier.width(600).height(450).padding(20)) {
+    Column {
+        Text("Monthly Revenue", Modifier.fontSize(24).bold());
+
+        let myChart = BarChart(monthlyRevenue, 500.0, 250.0);
+        myChart.render();
+
+        Spacer();
+
+        Button("Simulate Next Month", Modifier.background("#8b5cf6")) {
+            let newData = [];
+            let i = 0;
+            while(i < 5) {
+                newData.push(Math.random() * 200 + 20);
+                i = i + 1;
+            }
+            monthlyRevenue.value = newData;
+            monthlyRevenue.notify();
+        }
+    }
+}

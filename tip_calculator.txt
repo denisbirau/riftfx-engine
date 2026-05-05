@@ -1,0 +1,39 @@
+class TipManager {
+    constructor() {
+        this.billAmount = State(50.0);
+        this.tipPercentage = State(15.0);
+    }
+
+    getTipAmount() {
+        return (this.billAmount.value * this.tipPercentage.value) / 100;
+    }
+
+    getTotal() {
+        return this.billAmount.value + this.getTipAmount();
+    }
+}
+
+let calc = TipManager();
+
+Window("Restaurant Tip Calculator", Modifier.width(450).height(500).padding(24)) {
+    Column(Modifier.card()) {
+        Text("Tip Calculator", Modifier.fontSize(24).bold());
+
+        Grid(Modifier.padding(16)) {
+            GridCell(0, 0) { Text("Bill Amount ($):", Modifier.bold()); }
+            GridCell(0, 1) { Spinner(0, 1000, calc.billAmount); }
+
+            GridCell(1, 0) { Text("Tip %:", Modifier.bold()); }
+            GridCell(1, 1) { Slider(0, 30, calc.tipPercentage); }
+        }
+
+        Observe(calc.billAmount) {
+            Observe(calc.tipPercentage) {
+                Column(Modifier.padding(16).background("#f8fafc").cornerRadius(8)) {
+                    Text("Tip Amount: $" + calc.getTipAmount());
+                    Text("Total to Pay: $" + calc.getTotal(), Modifier.bold().fontSize(20).textColor("#10b981"));
+                }
+            }
+        }
+    }
+}

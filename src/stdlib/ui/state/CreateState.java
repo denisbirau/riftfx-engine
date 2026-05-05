@@ -12,6 +12,16 @@ public class CreateState extends AbstractCallable {
 
     @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
-        return new State(arguments.getFirst());
+        int index = Interpreter.currentStateIndex++;
+
+        Object activeValue = Interpreter.stateCache.getOrDefault(index, arguments.getFirst());
+
+        State state = new State(activeValue);
+        Interpreter.stateCache.put(index, activeValue);
+        state.listeners.add(() -> {
+            Interpreter.stateCache.put(index, state.value);
+            return true;
+        });
+        return state;
     }
 }

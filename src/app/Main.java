@@ -12,8 +12,7 @@ import interpreter.Interpreter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.List;
 
 import javafx.application.Platform;
@@ -24,8 +23,10 @@ public class Main {
             System.out.println("Invalid number of parameters.");
             System.exit(64);
         }
-
-        compileAndRun(args[0]);
+        String path = args[0];
+        Platform.startup(() -> {});
+        compileAndRun(path);
+        startHotReloadWatcher(path);
     }
 
     public static void compileAndRun(String path) {
@@ -33,30 +34,33 @@ public class Main {
             byte[] bytes = Files.readAllBytes(Paths.get(path));
             String sourceCode = new String(bytes, StandardCharsets.UTF_8);
 
-            Platform.startup(() -> {});
-
             ErrorReporter errorReporter = new ErrorReporter();
 
             Scanner scanner = new Scanner(sourceCode, errorReporter);
             List<Token> tokens = scanner.scan();
-            if (errorReporter.hadError()) exit(65);
+            if (errorReporter.hadError()) {
+                return;
+            }
 
             Parser parser = new Parser(tokens, errorReporter);
             List<Stmt> statements = parser.parse();
-            if (errorReporter.hadError()) exit(65);
+            if (errorReporter.hadError()) {
+                return;
+            }
 
             Resolver resolver = new Resolver(errorReporter);
             resolver.resolve(statements);
-            if (errorReporter.hadError()) exit(65);
-
-            UIRenderer renderer = new JavaFXRenderer();
-            Interpreter interpreter = new Interpreter(statements, errorReporter, renderer);
+            if (errorReporter.hadError()) {
+                return;
+            }
 
             Platform.runLater(() -> {
-                interpreter.interpret();
-                if (errorReporter.hadError()) {
-                    Platform.exit();
-                    exit(70);
+                try {
+                    UIRenderer renderer = new JavaFXRenderer();
+                    Interpreter interpreter = new Interpreter(statements, errorReporter, renderer);
+                    interpreter.interpret();
+                } catch (Exception e) {
+                    System.err.println("Runtime exception: " + e.getMessage());
                 }
             });
         } catch (IOException e) {
@@ -64,8 +68,35 @@ public class Main {
         }
     }
 
-    private static void exit(int code) {
-        Platform.exit();
-        System.exit(code);
+    private static void startHotReloadWatcher(String path) {
+        Thread watcherThread = new Thread(() -> {
+            try {
+                Path file = Paths.get(path).toAbsolutePath();
+                Path dir = file.getParent();
+
+                WatchService watchService = FileSystems.getDefault().newWatchService();
+                dir.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+
+                System.out.println("Hot Reload active on: " + file.getFileName());
+
+                while (true) {
+                    WatchKey watchKey = watchService.take();
+
+                    for (WatchEvent<?> event : watchKey.pollEvents()) {
+                        Path changedFile = (Path) event.context();
+                        if (changedFile.equals(file.getFileName())) {
+                            Thread.sleep(50);
+                            System.out.println("Recompiling...");
+                            compileAndRun(path);
+                        }
+                    }
+                    watchKey.reset();
+                }
+            } catch (IOException | InterruptedException e) {
+                System.err.println("Watcher error: " + e.getMessage());
+            }
+        });
+        watcherThread.setDaemon(true);
+        watcherThread.start();
     }
 }

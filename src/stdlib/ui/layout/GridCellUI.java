@@ -7,20 +7,21 @@ import javafx.scene.layout.StackPane;
 import stdlib.core.AbstractCallable;
 import stdlib.ui.core.InterpreterUtils;
 import stdlib.ui.core.RendererUtils;
+import stdlib.ui.modifier.ModifierInstance;
 
 import java.util.List;
 
 public class GridCellUI extends AbstractCallable {
     public GridCellUI() {
-        super(3, 3, "column", "row", "content");
+        super(3, 4, "column", "row", "modifier", "content");
     }
 
     @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
         double row = InterpreterUtils.getArgument(arguments, 0, Double.class, 0.0);
         double col = InterpreterUtils.getArgument(arguments, 1, Double.class, 0.0);
-        Callable lambda = InterpreterUtils.getArgument(arguments, 2, Callable.class, null);
-
+        ModifierInstance modifierInstance = InterpreterUtils.getArgument(arguments, 2, ModifierInstance.class, null);
+        Callable lambda = InterpreterUtils.getArgument(arguments, 3, Callable.class, null);
         if (lambda == null) {
             throw new RuntimeException("GridCell requires a content block.");
         }
@@ -33,6 +34,7 @@ public class GridCellUI extends AbstractCallable {
         StackPane cellContainer = new StackPane();
         GridPane.setColumnIndex(cellContainer, (int) col);
         GridPane.setRowIndex(cellContainer, (int) row);
+        RendererUtils.applyModifier(cellContainer, "-fx-background-color: transparent;", modifierInstance);
 
         RendererUtils.registerComponent(interpreter, cellContainer, "GridCell");
         interpreter.renderer.pushContainer(cellContainer);
