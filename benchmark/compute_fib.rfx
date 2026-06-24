@@ -1,0 +1,12 @@
+// Pure-compute workload: naive recursive Fibonacci.
+// Stresses the tree-walk evaluator's call/return path, environment
+// allocation, and arithmetic dispatch. No UI calls — runs headless.
+
+def fib(n) {
+    if (n < 2) {
+        return n;
+    }
+    return fib(n - 1) + fib(n - 2);
+}
+
+let result = fib(14);

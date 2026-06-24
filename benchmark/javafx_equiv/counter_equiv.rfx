@@ -1,0 +1,11 @@
+let count = State(0);
+Window("Counter") {
+    Column {
+        Observe(count) { Text("Count: ${count.value}"); }
+        Row {
+            Button("−") { count.value = count.value - 1; }
+            Button("+") { count.value = count.value + 1; }
+        }
+        Button("Reset") { count.value = 0; }
+    }
+}

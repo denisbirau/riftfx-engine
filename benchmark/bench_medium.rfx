@@ -1,0 +1,58 @@
+let counter    = State(0);
+let message    = State("Ready");
+let items      = State([]);
+
+def increment() {
+    counter.value = counter.value + 1;
+    if (counter.value > 10) {
+        message.value = "High!";
+    }
+}
+
+def decrement() {
+    if (counter.value > 0) {
+        counter.value = counter.value - 1;
+        message.value = "Decreased";
+    }
+}
+
+def reset() {
+    counter.value = 0;
+    message.value = "Reset";
+    items.value = [];
+}
+
+def addItem(label) {
+    items.value.push(label);
+    items.value = items.value;
+}
+
+def computeTotal() {
+    let total = 0;
+    let n = items.value.len;
+    for (let i = 0; i < n; i = i + 1) {
+        total = total + 1;
+    }
+    return total;
+}
+
+Window("Medium Benchmark") {
+    Column {
+        Observe(counter) { Text("Counter: ${counter.value}"); }
+        Observe(message) { Text("Status: ${message.value}"); }
+        Row {
+            Button("Increment") { increment(); }
+            Button("Decrement") { decrement(); }
+            Button("Reset") { reset(); }
+        }
+        Row {
+            Button("Add A") { addItem("Item A"); }
+            Button("Add B") { addItem("Item B"); }
+            Button("Add C") { addItem("Item C"); }
+        }
+        Observe(items) {
+            Text("Items: ${computeTotal()}");
+        }
+        Text("Benchmark: medium");
+    }
+}

@@ -1,0 +1,119 @@
+class Item {
+    init(name, val) {
+        this.name = name;
+        this.val  = val;
+    }
+    display() {
+        return this.name + ": " + this.val;
+    }
+    scaled(factor) {
+        return this.val * factor;
+    }
+}
+
+def factorial(n) {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+def fibonacci(n) {
+    if (n <= 1) {
+        return n;
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+def sumArray(arr) {
+    let total = 0;
+    let len = arr.len;
+    for (let i = 0; i < len; i = i + 1) {
+        total = total + arr[i];
+    }
+    return total;
+}
+
+def clamp(v, lo, hi) {
+    return v < lo ? lo : (v > hi ? hi : v);
+}
+
+let countA  = State(0);
+let countB  = State(0);
+let score   = State(0);
+let level   = State(1);
+let status  = State("Active");
+let history = State([]);
+let items   = State([]);
+let mult    = State(1);
+
+def updateScore() {
+    let pts = factorial(level.value) * mult.value;
+    score.value = score.value + pts;
+    history.value.push(score.value);
+    history.value = history.value;
+}
+
+def levelUp() {
+    level.value = level.value + 1;
+    mult.value = mult.value + 1;
+    status.value = "Level ${level.value}";
+}
+
+def addItem(name, val) {
+    let it = Item(name, val);
+    items.value.push(it);
+    items.value = items.value;
+}
+
+def computeStats() {
+    let n = items.value.len;
+    let total = 0;
+    for (let i = 0; i < n; i = i + 1) {
+        total = total + items.value[i].val;
+    }
+    return total;
+}
+
+def resetAll() {
+    countA.value  = 0;
+    countB.value  = 0;
+    score.value   = 0;
+    level.value   = 1;
+    mult.value    = 1;
+    status.value  = "Active";
+    history.value = [];
+    items.value   = [];
+}
+
+Window("Large Benchmark") {
+    Column {
+        Observe(countA) { Text("A: ${countA.value}  B: ${countB.value}"); }
+        Observe(score) { Text("Score: ${score.value}  Level: ${level.value}"); }
+        Observe(status) { Text("Status: ${status.value}"); }
+        Observe(items) { Text("Items: ${items.value.len}  Stats: ${computeStats()}"); }
+        Row {
+            Button("A+") { countA.value = countA.value + 1; updateScore(); }
+            Button("A−") { countA.value = clamp(countA.value - 1, 0, 99); }
+            Button("B+") { countB.value = countB.value + 1; }
+            Button("B−") { countB.value = clamp(countB.value - 1, 0, 99); }
+        }
+        Row {
+            Button("Level Up") { levelUp(); }
+            Button("Add Alpha") { addItem("Alpha", countA.value); }
+            Button("Add Beta")  { addItem("Beta",  countB.value); }
+        }
+        Row {
+            Button("Factorial") {
+                let f = factorial(countA.value);
+                status.value = "Fact: ${f}";
+            }
+            Button("Fibonacci") {
+                let f = fibonacci(countA.value);
+                status.value = "Fib: ${f}";
+            }
+            Button("Reset") { resetAll(); }
+        }
+        Text("Benchmark: large");
+    }
+}

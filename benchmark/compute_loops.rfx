@@ -1,0 +1,19 @@
+// Pure-compute workload: nested iterative loops with arithmetic and
+// array accumulation. Stresses the while/for desugaring, subscript
+// get/set on NativeArray, and numeric operators. No UI calls.
+
+def sumTo(n) {
+    let total = 0;
+    for (let i = 0; i < n; i = i + 1) {
+        total = total + i * 2 - 1;
+    }
+    return total;
+}
+
+let buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+let acc = 0;
+for (let k = 0; k < 200; k = k + 1) {
+    let slot = k % 10;
+    buffer[slot] = buffer[slot] + sumTo(50);
+    acc = acc + buffer[slot];
+}

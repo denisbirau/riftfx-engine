@@ -1,0 +1,28 @@
+let title  = "Small Benchmark";
+let values = [10, 20, 30, 40, 50];
+let total  = 0;
+
+for (let i = 0; i < 5; i = i + 1) {
+    total = total + values[i];
+}
+
+def greet(name) {
+    return "Hello, ${name}!";
+}
+
+def double(n) {
+    return n * 2;
+}
+
+Window(title) {
+    Column {
+        Text(greet("RiftFX"));
+        Text("Sum: ${total}");
+        Text("Doubled: ${double(total)}");
+        Row {
+            Button("Action A") {}
+            Button("Action B") {}
+            Button("Action C") {}
+        }
+    }
+}

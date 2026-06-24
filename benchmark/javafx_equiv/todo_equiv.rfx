@@ -1,0 +1,27 @@
+let items = State([]);
+let input = State("");
+
+Window("To-Do List") {
+    Column {
+        Observe(items) { Text("Tasks: ${items.value.len}"); }
+        ListView(items) { item -> Text(item); }
+        Row {
+            TextField(input);
+            Button("Add") {
+                if (input.value != "") {
+                    items.value.push(input.value);
+                    items.value = items.value;
+                    input.value = "";
+                }
+            }
+        }
+        Row {
+            Button("Remove Selected") {
+                items.value = items.value;
+            }
+            Button("Clear All") {
+                items.value = [];
+            }
+        }
+    }
+}

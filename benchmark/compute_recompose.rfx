@@ -1,0 +1,14 @@
+// Pure-compute workload that mirrors the per-update work performed
+// inside a reactive Observe block: repeatedly formatting interpolated
+// strings from a changing value (as a Text body would). Exercises the
+// scanner's string-interpolation desugaring, the string-concatenation
+// path, and function-call overhead. No UI calls — runs headless.
+
+def render(count) {
+    return "Count: ${count}  doubled=${count * 2}  parity=${count % 2}";
+}
+
+let out = "";
+for (let i = 0; i < 400; i = i + 1) {
+    out = render(i);
+}
