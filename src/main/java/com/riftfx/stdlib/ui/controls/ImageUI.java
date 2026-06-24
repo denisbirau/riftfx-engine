@@ -8,6 +8,7 @@ import javafx.scene.shape.Rectangle;
 import com.riftfx.stdlib.ui.core.AbstractUIComponent;
 import com.riftfx.stdlib.core.InterpreterUtils;
 import com.riftfx.stdlib.ui.core.RendererUtils;
+import com.riftfx.stdlib.ui.core.UITheme;
 import com.riftfx.stdlib.ui.modifier.ModifierInstance;
 
 import java.util.List;
@@ -51,7 +52,7 @@ public class ImageUI extends AbstractUIComponent {
                 });
                 imageView.setClip(clip);
             }
-            RendererUtils.applyModifier(imageContainer, "-fx-background-color: transparent;", modifierInstance);
+            RendererUtils.applyModifier(imageContainer, UITheme.IMAGE_CONTAINER, modifierInstance);
         }
 
         register(interpreter, imageContainer);

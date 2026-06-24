@@ -28,7 +28,7 @@ public class DatePickerUI extends AbstractUIComponent {
         if (state.value instanceof NativeDate(java.time.LocalDate date)) {
             datePicker.setValue(date);
         }
-        RendererUtils.applyModifier(datePicker, UITheme.INPUT, modifierInstance);
+        RendererUtils.applyModifier(datePicker, UITheme.DATE_PICKER, modifierInstance);
 
         datePicker.valueProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {

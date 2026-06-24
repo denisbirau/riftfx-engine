@@ -9,6 +9,7 @@ import javafx.scene.layout.VBox;
 import com.riftfx.stdlib.core.AbstractCallable;
 import com.riftfx.stdlib.core.InterpreterUtils;
 import com.riftfx.stdlib.ui.core.RendererUtils;
+import com.riftfx.stdlib.ui.core.UITheme;
 import com.riftfx.stdlib.ui.modifier.ModifierInstance;
 
 import java.util.List;
@@ -37,7 +38,7 @@ public class TabUI extends AbstractCallable {
 
         VBox tabContent = new VBox(10);
         VBox.setVgrow(tabContent, Priority.ALWAYS);
-        RendererUtils.applyModifier(tabContent, "-fx-background-color: transparent;", modifierInstance);
+        RendererUtils.applyModifier(tabContent, UITheme.TAB_CONTENT, modifierInstance);
         tab.setContent(tabContent);
         tabPane.getTabs().add(tab);
 

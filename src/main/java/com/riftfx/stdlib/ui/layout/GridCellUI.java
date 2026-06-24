@@ -7,6 +7,7 @@ import javafx.scene.layout.StackPane;
 import com.riftfx.stdlib.core.AbstractCallable;
 import com.riftfx.stdlib.core.InterpreterUtils;
 import com.riftfx.stdlib.ui.core.RendererUtils;
+import com.riftfx.stdlib.ui.core.UITheme;
 import com.riftfx.stdlib.ui.modifier.ModifierInstance;
 
 import java.util.List;
@@ -34,7 +35,7 @@ public class GridCellUI extends AbstractCallable {
         StackPane cellContainer = new StackPane();
         GridPane.setColumnIndex(cellContainer, (int) col);
         GridPane.setRowIndex(cellContainer, (int) row);
-        RendererUtils.applyModifier(cellContainer, "-fx-background-color: transparent;", modifierInstance);
+        RendererUtils.applyModifier(cellContainer, UITheme.GRID_CELL, modifierInstance);
 
         RendererUtils.registerComponent(interpreter, cellContainer, "GridCell");
         interpreter.renderer.pushContainer(cellContainer);

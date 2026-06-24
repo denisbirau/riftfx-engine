@@ -23,6 +23,18 @@ public class State implements NativeObject {
         return fallback;
     }
 
+    private void triggerListeners() {
+        List<UIListener> deadListeners = new ArrayList<>();
+
+        for (UIListener listener : new ArrayList<>(listeners)) {
+            if (!listener.update()) {
+                deadListeners.add(listener);
+            }
+        }
+
+        listeners.removeAll(deadListeners);
+    }
+
     @Override
     public Object getMember(Token member) {
         if (member.lexeme().equals("value")) {
@@ -36,7 +48,7 @@ public class State implements NativeObject {
 
                 @Override
                 public Object call(List<Object> arguments, Interpreter interpreter) {
-                    listeners.removeIf(uiListener -> !uiListener.update());
+                    triggerListeners();
                     return null;
                 }
             };
@@ -48,7 +60,7 @@ public class State implements NativeObject {
     public void setMember(Token member, Object newValue) {
         if (member.lexeme().equals("value")) {
             this.value = newValue;
-            listeners.removeIf(uiListener -> !uiListener.update());
+            triggerListeners();
             return;
         }
         throw new RuntimeException("Undefined property: '" + member.lexeme() + "'.");

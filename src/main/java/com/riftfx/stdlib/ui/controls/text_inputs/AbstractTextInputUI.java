@@ -6,7 +6,6 @@ import com.riftfx.stdlib.ui.core.AbstractUIComponent;
 import com.riftfx.stdlib.core.InterpreterUtils;
 import com.riftfx.stdlib.ui.state.ReactiveBinding;
 import com.riftfx.stdlib.ui.core.RendererUtils;
-import com.riftfx.stdlib.ui.core.UITheme;
 import com.riftfx.stdlib.ui.modifier.ModifierInstance;
 import com.riftfx.stdlib.ui.state.State;
 
@@ -19,6 +18,8 @@ public abstract class AbstractTextInputUI<T extends TextInputControl> extends Ab
 
     protected abstract T createNode();
 
+    protected abstract String getBaseStyle();
+
     @Override
     public Object call(List<Object> arguments, Interpreter interpreter) {
         State state = InterpreterUtils.getArgument(arguments, 0, State.class, null);
@@ -29,7 +30,7 @@ public abstract class AbstractTextInputUI<T extends TextInputControl> extends Ab
 
         T inputControl = createNode();
         inputControl.setText(state.getValueOrDefault(String.class, ""));
-        RendererUtils.applyModifier(inputControl, UITheme.INPUT, modifierInstance);
+        RendererUtils.applyModifier(inputControl, getBaseStyle(), modifierInstance);
         ReactiveBinding.bindBidirectional(state, inputControl.textProperty(), inputControl, "");
 
         register(interpreter, inputControl);

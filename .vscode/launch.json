@@ -3,18 +3,12 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Launch Java Program",
-            "request": "launch",
-            "mainClass": ""
-        },
-        {
-            "type": "java",
-            "name": "Run RiftFX",
+            "name": "Run Current RiftFX File",
             "request": "launch",
             "mainClass": "com.riftfx.app.Main",
             "projectName": "riftfx-engine",
             "args": [
-                "task_manager.rfx"
+                "${file}"
             ]
         }
     ]

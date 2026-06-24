@@ -50,7 +50,27 @@ public class WindowUI extends AbstractCallable {
         }
 
         if (stage.getScene() == null) {
-            stage.setScene(new Scene(root, UITheme.WINDOW_WIDTH, UITheme.WINDOW_HEIGHT));
+            double width = UITheme.WINDOW_WIDTH;
+            double height = UITheme.WINDOW_HEIGHT;
+            if (modifierInstance != null) {
+                if (modifierInstance.cssProperties.containsKey("-fx-pref-width")) {
+                    try {
+                        width = Double.parseDouble(
+                                modifierInstance.cssProperties.get("-fx-pref-width").replace("px", "").trim());
+                    } catch (NumberFormatException e) {
+                        // Ignore and use default width
+                    }
+                }
+                if (modifierInstance.cssProperties.containsKey("-fx-pref-height")) {
+                    try {
+                        height = Double.parseDouble(
+                                modifierInstance.cssProperties.get("-fx-pref-height").replace("px", "").trim());
+                    } catch (NumberFormatException e) {
+                        // Ignore and use default height
+                    }
+                }
+            }
+            stage.setScene(new Scene(root, width, height));
         } else {
             stage.getScene().setRoot(root);
         }

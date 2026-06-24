@@ -7,6 +7,7 @@ import javafx.scene.layout.VBox;
 import com.riftfx.stdlib.ui.core.AbstractUIComponent;
 import com.riftfx.stdlib.core.InterpreterUtils;
 import com.riftfx.stdlib.ui.core.RendererUtils;
+import com.riftfx.stdlib.ui.core.UITheme;
 import com.riftfx.stdlib.ui.modifier.ModifierInstance;
 
 import java.util.List;
@@ -27,7 +28,7 @@ public class ScrollPaneUI extends AbstractUIComponent {
 
         ScrollPane scrollPane = new ScrollPane();
         scrollPane.setFitToWidth(true);
-        RendererUtils.applyModifier(scrollPane, "-fx-background-color: transparent;", modifierInstance);
+        RendererUtils.applyModifier(scrollPane, UITheme.SCROLL_PANE, modifierInstance);
 
         VBox contentBox = new VBox(5.0);
         scrollPane.setContent(contentBox);

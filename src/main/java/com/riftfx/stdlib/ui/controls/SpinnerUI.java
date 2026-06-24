@@ -27,7 +27,7 @@ public class SpinnerUI extends AbstractUIComponent {
 
         Spinner<Double> spinner = new Spinner<>(min, max, state.getValueOrDefault(Double.class, min));
         spinner.setEditable(true);
-        RendererUtils.applyModifier(spinner, UITheme.INPUT, modifierInstance);
+        RendererUtils.applyModifier(spinner, UITheme.SPINNER, modifierInstance);
         ReactiveBinding.bindBidirectional(state, spinner.getValueFactory().valueProperty(), spinner, min);
 
         register(interpreter, spinner);

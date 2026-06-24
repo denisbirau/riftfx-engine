@@ -49,7 +49,8 @@ public class NativeMath implements NativeObject {
                         throw new RuntimeException("Math.round expects a number.");
                     }
 
-                    double decimals = InterpreterUtils.getArgument(arguments, 1, Double.class, 0.0);
+                    Double decimalsWrapper = InterpreterUtils.getArgument(arguments, 1, Double.class, 0.0);
+                    double decimals = (decimalsWrapper != null) ? decimalsWrapper : 0.0;
                     double scale = Math.pow(10, decimals);
 
                     return Math.round(d * scale) / scale;

@@ -16,6 +16,7 @@ public class Parser {
     private final TokenStream stream;
     private final ExpressionParser expressionParser;
     private final ErrorReporter errorReporter;
+    private boolean isPanicking = false;
 
     public Parser(List<Token> tokens, ErrorReporter errorReporter) {
         this.stream = new TokenStream(tokens);
@@ -29,8 +30,12 @@ public class Parser {
         while (!stream.isAtEnd()) {
             try {
                 statements.add(parseDeclaration());
+                isPanicking = false;
             } catch (ParseError error) {
-                errorReporter.report(error.getMessage(), error.getToken());
+                if (!isPanicking) {
+                    errorReporter.report(error.getMessage(), error.getToken());
+                    isPanicking = true;
+                }
                 skipToNextStatement();
             }
         }
@@ -224,6 +229,8 @@ public class Parser {
         while (!stream.isAtEnd()) {
             if (stream.previous().type() == TokenType.SEMICOLON)
                 return;
+            if (stream.check(TokenType.RIGHT_BRACE))
+                return;
             if (stream.check(TokenType.LET))
                 break;
             if (stream.check(TokenType.PRINT))
@@ -239,6 +246,8 @@ public class Parser {
             if (stream.check(TokenType.DEF))
                 break;
             if (stream.check(TokenType.RETURN))
+                break;
+            if (stream.check(TokenType.CLASS))
                 break;
             stream.advance();
         }

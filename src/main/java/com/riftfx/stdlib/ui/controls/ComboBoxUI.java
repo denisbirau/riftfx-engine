@@ -44,7 +44,7 @@ public class ComboBoxUI extends AbstractUIComponent {
             state.value = options.getFirst();
         }
 
-        RendererUtils.applyModifier(comboBox, UITheme.INPUT, modifierInstance);
+        RendererUtils.applyModifier(comboBox, UITheme.COMBO_BOX, modifierInstance);
 
         comboBox.valueProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
